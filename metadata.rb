@@ -8,3 +8,4 @@ version          '0.1.0'
 
 depends          'sysutils', '= 1.0.0'
 depends          'percona', "= 0.15.5"
+depends          'rabbitmq', '= 3.2.3'
