@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: openstack-services
-# Recipe:: default
+# Recipe:: ha-database
 #
 # Copyright (c) 2014 Fidelity Investments.
 #
@@ -17,38 +17,12 @@
 # limitations under the License.
 #
 
-# Check if extra storage was provided and if it was format and mount it
-if node["percona"]["server"].has_key?("data_disk")
+# If extra storage was provided use that as the data path
+node.override["percona"]["server"]["datadir"] = node["env"]["data_path"] \
+    if node["env"].has_key?("data_path") && !node["env"]["data_path"].empty?
 
-    data_disk = node["percona"]["server"]["data_disk"]
-    data_path = node["percona"]["server"]["data_path"]
-
-    script "prepare data disk" do
-        interpreter "bash"
-        user "root"
-        cwd "/tmp"
-        code <<-EOH
-
-            if [ -n "$(lsblk | grep #{data_disk.split("/").last})" ] && \
-                [ -z "$(blkid | grep #{data_disk})"]; then
-
-                echo "**** Formating data disk #{data_disk} with ext4 file system..."
-                mkfs.ext4 #{data_disk}
-                if [ $? -eq 0 ]; then
-                    mkdir -p #{data_path}
-                fi
-            fi
-        EOH
-    end
-
-    mount data_path do
-        device data_disk
-        fstype "ext4"
-        action [:mount, :enable]
-    end
-
-    node.override["percona"]["server"]["datadir"] = data_path
-end
+# Set encrypted password databag by environment
+node.override["percona"]["encrypted_data_bag"] = "passwords.#{node.chef_environment}"
 
 # Setup the Percona XtraDB Cluster
 cluster_ips = []
