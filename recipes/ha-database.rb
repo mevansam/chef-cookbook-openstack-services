@@ -17,6 +17,46 @@
 # limitations under the License.
 #
 
+# Setup certs for MySql ssl configuration
+if node["mysql"]["ssl"] &&
+    !node["mysql"]["certificate_databag_item"].nil? &&
+    !node["mysql"]["certificate_databag_item"].empty?
+
+    certificates = Chef::EncryptedDataBagItem.load("certificates-#{node.chef_environment}", node["mysql"]["certificate_databag_item"], encryption_key)
+
+    mysql_config_path = node["mysql"]["config_path"]
+    directory mysql_config_path
+
+    cacert_path = "#{mysql_config_path}/cacert.pem"
+    cert_path = "#{mysql_config_path}/cert.pem"
+    key_path = "#{mysql_config_path}/key.pem"
+
+    file cacert_path do
+        owner "root"
+        group "root"
+        mode "0644"
+        content certificates["cacert"]
+    end
+    
+    file cert_path do
+        owner "root"
+        group "root"
+        mode "0644"
+        content certificates["cert"]
+    end
+    
+    file key_path do
+        owner "root"
+        group "root"
+        mode "0644"
+        content certificates["key"]
+    end
+
+    node.override["percona"]["conf"]["mysqld"]["ssl-ca"] = cacert_path
+    node.override["percona"]["conf"]["mysqld"]["ssl-cert"] = cert_path
+    node.override["percona"]["conf"]["mysqld"]["ssl-key"] = key_path
+end
+
 # If extra storage was provided use that as the data path
 node.override["percona"]["server"]["datadir"] = node["env"]["data_path"] \
     if node["env"].has_key?("data_path") && !node["env"]["data_path"].empty?

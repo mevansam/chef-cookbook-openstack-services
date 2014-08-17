@@ -25,6 +25,8 @@ node.override['rabbitmq']['default_user'] = rabbit_passwords["default_user"]
 node.override['rabbitmq']['default_pass'] = rabbit_passwords["default_password"]
 
 if node['rabbitmq']['ssl']
+    !node["rabbitmq"]["certificate_databag_item"].nil? &&
+    !node["rabbitmq"]["certificate_databag_item"].empty?
 
 	certificates = Chef::EncryptedDataBagItem.load("certificates-#{node.chef_environment}", node["rabbitmq"]["certificate_databag_item"], encryption_key)
 
@@ -38,21 +40,21 @@ if node['rabbitmq']['ssl']
     file cacert_path do
         owner "root"
         group "root"
-        mode "0400"
+        mode "0644"
         content certificates["cacert"]
     end
     
     file cert_path do
         owner "root"
         group "root"
-        mode "0400"
+        mode "0644"
         content certificates["cert"]
     end
     
     file key_path do
         owner "root"
         group "root"
-        mode "0400"
+        mode "0644"
         content certificates["key"]
     end
 
