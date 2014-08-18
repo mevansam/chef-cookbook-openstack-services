@@ -63,4 +63,6 @@ if node['rabbitmq']['ssl']
 	node.override['rabbitmq']['ssl_key'] = key_path
 end
 
+include_recipe 'rabbitmq::default'
 include_recipe 'rabbitmq::mgmt_console'
+include_recipe 'rabbitmq::policy_management'
