@@ -18,13 +18,15 @@
 #
 
 # Setup certs for MySql ssl configuration
-if node["mysql"]["ssl"] &&
-    !node["mysql"]["certificate_databag_item"].nil? &&
-    !node["mysql"]["certificate_databag_item"].empty?
+if node["percona"]["mysql"]["ssl"] &&
+    !node["percona"]["mysql"]["certificate_databag_item"].nil? &&
+    !node["percona"]["mysql"]["certificate_databag_item"].empty?
 
-    certificates = Chef::EncryptedDataBagItem.load("certificates-#{node.chef_environment}", node["mysql"]["certificate_databag_item"], encryption_key)
+    encryption_key = node["env"]["encryption_key"]
+    certificates = Chef::EncryptedDataBagItem.load( "certificates-#{node.chef_environment}", 
+        node["percona"]["mysql"]["certificate_databag_item"], encryption_key )
 
-    mysql_config_path = node["mysql"]["config_path"]
+    mysql_config_path = node["percona"]["mysql"]["config_path"]
     directory mysql_config_path
 
     cacert_path = "#{mysql_config_path}/cacert.pem"
@@ -52,9 +54,18 @@ if node["mysql"]["ssl"] &&
         content certificates["key"]
     end
 
-    node.override["percona"]["conf"]["mysqld"]["ssl-ca"] = cacert_path
-    node.override["percona"]["conf"]["mysqld"]["ssl-cert"] = cert_path
-    node.override["percona"]["conf"]["mysqld"]["ssl-key"] = key_path
+    include_dir = node["percona"]["server"]["includedir"]
+    directory include_dir
+
+    template "#{include_dir}/mysql_ssl.cnf" do
+        source "mysql_ssl.cnf.erb"
+        mode "0644"
+        variables(
+            :cacert => cacert_path,
+            :cert => cert_path,
+            :key => key_path
+        )
+    end
 end
 
 # If extra storage was provided use that as the data path
