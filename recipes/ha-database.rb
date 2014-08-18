@@ -73,7 +73,7 @@ node.override["percona"]["server"]["datadir"] = node["env"]["data_path"] \
     if node["env"].has_key?("data_path") && !node["env"]["data_path"].empty?
 
 # Set encrypted password databag by environment
-node.override["percona"]["encrypted_data_bag"] = "passwords.#{node.chef_environment}"
+node.override["percona"]["encrypted_data_bag"] = "passwords-#{node.chef_environment}"
 
 # Setup the Percona XtraDB Cluster
 cluster_ips = []
