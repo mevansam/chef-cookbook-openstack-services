@@ -17,6 +17,16 @@
 # limitations under the License.
 #
 
+skip_upstart_patch = node["env"]["skip_upstart_patch"]
+if !skip_upstart_patch
+	# Work around for bug https://bugs.launchpad.net/openstack-chef/+bug/1313646
+	# This code should be removed when chef client 11.14 is available
+	if node['platform'] == 'ubuntu' && node['platform_version'] == '14.04'
+		Chef::Platform.set :platform => :ubuntu, :resource => :service, :provider => Chef::Provider::Service::Upstart
+	end
+end
+
+node.override['openstack']['db']['root_user_key'] = "root"
 node.override["openstack"]["secret"]["user_passwords_data_bag"] = "os_user_passwords-#{node.chef_environment}"
 node.override["openstack"]["secret"]["db_passwords_data_bag"] = "os_db_passwords-#{node.chef_environment}"
 node.override["openstack"]["secret"]["service_passwords_data_bag"] = "os_service_passwords-#{node.chef_environment}"
