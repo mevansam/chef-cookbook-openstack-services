@@ -21,8 +21,12 @@ encryption_key = get_encryption_secret
 rabbit_passwords = Chef::EncryptedDataBagItem.load("passwords-#{node.chef_environment}", "rabbit", encryption_key)
 
 node.override['rabbitmq']['erlang_cookie'] = rabbit_passwords["erlang_cookie"]
-node.override['rabbitmq']['default_user'] = rabbit_passwords["default_user"]
-node.override['rabbitmq']['default_pass'] = rabbit_passwords["default_password"]
+
+default_user = rabbit_passwords["default_user"]
+default_password = rabbit_passwords["default_password"]
+
+node.override['rabbitmq']['default_user'] = default_user
+node.override['rabbitmq']['default_pass'] = default_password
 
 if node['rabbitmq']['ssl']
     !node["rabbitmq"]["certificate_databag_item"].nil? &&
@@ -65,4 +69,13 @@ end
 
 include_recipe 'rabbitmq::default'
 include_recipe 'rabbitmq::mgmt_console'
+include_recipe 'rabbitmq::virtualhost_management'
 include_recipe 'rabbitmq::policy_management'
+
+node['rabbitmq']['virtualhosts'].each do |virtualhost|
+    rabbitmq_user default_user do
+        vhost virtualhost
+        permissions ".* .* .*"
+        action :set_permissions
+    end
+end

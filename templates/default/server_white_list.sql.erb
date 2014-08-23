@@ -1,6 +1,0 @@
-# Server white list.
-
-<%- @server_while_list.each do |server| %>
-GRANT ALL ON *.* to root@'<%= server %>' IDENTIFIED BY '<%= @root_password %>';
-<%- end %>
-FLUSH PRIVILEGES;

@@ -81,17 +81,25 @@ node.override["percona"]["encrypted_data_bag"] = "passwords-#{node.chef_environm
 
 # Setup the Percona XtraDB Cluster
 cluster_role = node["percona"]["cluster_role"]
+databases_installed = Hash.new
+
 cluster_ips = []
 unless Chef::Config[:solo]
-    search(:node, "role:#{cluster_role}").each do |other_node|
+    search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |other_node|
         
         Chef::Log.info("Found cluster node '#{other_node.name}' for role '#{cluster_role}'.")
+
+        databases = other_node["percona"]["openstack"]["databases"] if !other_node["percona"]["openstack"].nil?
+        databases_installed.merge!(databases) if !databases.nil?
 
         next if other_node['private_ipaddress'] == node['private_ipaddress']
         Chef::Log.info "Found Percona XtraDB cluster peer: #{other_node['private_ipaddress']}"
         cluster_ips << other_node['private_ipaddress']
     end
 end
+
+node.set["percona"]["openstack"]["databases"] = databases_installed
+node.save
 
 cluster_ips.each do |ip|
 
@@ -123,33 +131,6 @@ include_recipe 'percona::cluster'
 include_recipe 'percona::backup'
 include_recipe 'percona::toolkit'
 
-# Grant root access to servers in whitelist
-server_white_list = node["percona"]["mysql"]["server_white_list"]
-
-if !server_white_list.nil? && server_white_list.size > 0
-
-    Chef::Log.info("White listing the following servers for root access: #{server_white_list}")
-    passwords = EncryptedPasswords.new(node, node["percona"]["encrypted_data_bag"])
-
-    template "/etc/mysql/server_white_list.sql" do
-        source "server_white_list.sql.erb"
-        variables(
-            server_while_list: server_white_list,
-            root_password: passwords.root_password
-        )
-        owner "root"
-        group "root"
-        mode "0600"
-    end
-
-    execute "mysql-set-server-white-list" do
-        command "/usr/bin/mysql -p'#{passwords.root_password}' -e '' &> /dev/null > /dev/null &> /dev/null ; if [ $? -eq 0 ] ; then /usr/bin/mysql -p'#{passwords.root_password}' < /etc/mysql/server_white_list.sql ; else /usr/bin/mysql < /etc/mysql/server_white_list.sql ; fi ;" # rubocop:disable LineLength
-        action :nothing
-        subscribes :run, resources("template[/etc/mysql/server_white_list.sql]"), :immediately
-    end
-
-end
-
 # Create openstack databases
 openstack_proxy = node["env"]["openstack_proxy"]
 openstack_proxy_name = openstack_proxy.split('.').first
@@ -163,14 +144,21 @@ node["percona"]["openstack"]["services"].each do |service|
     db_name = node['openstack']['db'][service]['db_name']
     db_password = get_password('db', db_name)
 
-    script "Creating database '#{db_name} for service #{service} with user/passwd '#{db_user}." do
-        interpreter "bash"
-        user "root"
-        cwd "/tmp"
-        code <<-EOH
+    if !node["percona"]["openstack"]["databases"][service]
 
-            db_exists=$(mysql -e "SHOW DATABASES" | grep #{db_name})
-            if [ -z "$db_exists" ]; then
+        ruby_block "flag database for service '#{service}' was installed successfully" do
+            block do
+                node.set["percona"]["openstack"]["databases"][service] = true
+                node.save
+            end
+            action :nothing
+        end
+
+        script "Creating database '#{db_name} for service #{service} with user/passwd '#{db_user}." do
+            interpreter "bash"
+            user "root"
+            cwd "/tmp"
+            code <<-EOH
 
                 mysql -e " \
                     GRANT USAGE ON *.* TO '#{db_user}'@'localhost'; \
@@ -183,7 +171,8 @@ node["percona"]["openstack"]["services"].each do |service|
                     GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'#{openstack_proxy_name}' IDENTIFIED BY '#{db_password}'; \
                     GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'localhost' IDENTIFIED BY '#{db_password}'; \
                     GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'%' IDENTIFIED BY '#{db_password}';"
-            fi
-        EOH
+            EOH
+            notifies :create, resources(:ruby_block => "flag database for service '#{service}' was installed successfully"), :immediately
+        end
     end
 end

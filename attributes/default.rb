@@ -12,6 +12,9 @@ default["percona"]["openstack"]["services"] = [ ]
 ## Additional RabbitMQ options
 default["rabbitmq"]["certificate_databag_item"] = nil
 
+## Post-install packages
+default["openstack"]["post-install-packages"] = { }
+
 ## Load attributes from openstack-common cookbook
 include_attribute "openstack-common::default"
 include_attribute "openstack-common::database"
