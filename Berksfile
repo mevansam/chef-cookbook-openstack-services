@@ -15,7 +15,6 @@ cookbook 'rabbitmq', git: 'https://github.com/kennonkwok/rabbitmq.git'
 cookbook 'statsd',   git: 'https://github.com/att-cloud/cookbook-statsd'
 
 cookbook 'openstack-common',         git: 'https://github.com/stackforge/cookbook-openstack-common',         branch: 'stable/icehouse'
-cookbook 'openstack-dashboard',      git: 'https://github.com/stackforge/cookbook-openstack-dashboard',      branch: 'stable/icehouse'
 cookbook 'openstack-identity',       git: 'https://github.com/stackforge/cookbook-openstack-identity',       branch: 'stable/icehouse'
 cookbook 'openstack-network',        git: 'https://github.com/stackforge/cookbook-openstack-network',        branch: 'stable/icehouse'
 cookbook 'openstack-object-storage', git: 'https://github.com/stackforge/cookbook-openstack-object-storage', branch: 'stable/icehouse'
@@ -27,6 +26,7 @@ cookbook 'openstack-telemetry',      git: 'https://github.com/stackforge/cookboo
 cookbook 'openstack-image',          git: 'https://github.com/fmr-llc/cookbook-openstack-image.git',         branch: 'stable/icehouse'
 cookbook 'openstack-block-storage',  git: 'https://github.com/fmr-llc/cookbook-openstack-block-storage',     branch: 'stable/icehouse'
 cookbook 'openstack-compute',        git: 'https://github.com/fmr-llc/cookbook-openstack-compute.git',       branch: 'stable/icehouse'
+cookbook 'openstack-dashboard',      git: 'https://github.com/fmr-llc/cookbook-openstack-dashboard',         branch: 'stable/icehouse'
 
 cookbook 'sysutils', git: 'ssh://git@ei-stash.fmr.com:7999/ccop/cookbook-sysutils.git'
 cookbook 'compute',  git: 'ssh://git@ei-stash.fmr.com:7999/ccop/cookbook-compute.git'
