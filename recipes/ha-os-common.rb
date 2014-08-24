@@ -32,4 +32,3 @@ node.override["openstack"]["secret"]["service_passwords_data_bag"] = "os_service
 node.override["openstack"]["secret"]["secrets_data_bag"] = "os_secrets-#{node.chef_environment}"
 node.override['openstack']['secret']['key_path'] = "/etc/chef/encrypted_data_bag_secret"
 node.override['openstack']['db']['root_user_use_databag'] = true
-node.save

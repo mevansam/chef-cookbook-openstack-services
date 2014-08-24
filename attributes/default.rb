@@ -9,8 +9,16 @@ default["percona"]["mysql"]["certificate_databag_item"] = nil
 
 default["percona"]["openstack"]["services"] = [ ]
 
-## Additional RabbitMQ options
+## Attributes that identify the databags containing SSL certificate data
 default["rabbitmq"]["certificate_databag_item"] = nil
+default["percona"]["mysql"]["certificate_databag_item"] = nil
+default["openstack"]["dashboard"]["certificate_databag_item"] = nil
+
+# Location of nova source
+default['openstack']['compute']['source_url'] = 'https://github.com/openstack/nova.git'
+
+# Xen storage NFS share to use for images
+default['openstack']['xen']['default_storage_repository'] = nil
 
 ## Post-install packages
 default["openstack"]["post-install-packages"] = { }
