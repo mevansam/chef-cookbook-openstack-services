@@ -22,7 +22,7 @@ if node['openstack']['dashboard']['use_ssl'] &&
     !node["openstack"]["dashboard"]["certificate_databag_item"].nil? &&
     !node["openstack"]["dashboard"]["certificate_databag_item"].empty?
 
-    encryption_key = get_encryption_secret
+    encryption_key = ::SysUtils::get_encryption_secret
     certificates = Chef::EncryptedDataBagItem.load( "certificates-#{node.chef_environment}", 
         node['openstack']['dashboard']["certificate_databag_item"], encryption_key )
 

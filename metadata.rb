@@ -7,6 +7,7 @@ long_description 'Installs/Configures recipes that use stackforge and related co
 version          '0.1.0'
 
 depends          'sysutils', '= 1.0.0'
-depends          'percona', "= 0.15.5"
-depends          'rabbitmq', '= 3.2.3'
+depends          'storage', '= 0.1.0'
+depends          'percona', '>= 0.15.5'
+depends          'rabbitmq', '>= 3.2.3'
 depends          'openstack-common'

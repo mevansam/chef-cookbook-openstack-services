@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 
-encryption_key = get_encryption_secret
+encryption_key = ::SysUtils::get_encryption_secret
 rabbit_passwords = Chef::EncryptedDataBagItem.load("passwords-#{node.chef_environment}", "rabbit", encryption_key)
 
 node.override['rabbitmq']['erlang_cookie'] = rabbit_passwords["erlang_cookie"]

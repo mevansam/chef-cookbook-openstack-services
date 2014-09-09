@@ -26,7 +26,7 @@ if node["percona"]["mysql"]["ssl"] &&
     !node["percona"]["mysql"]["certificate_databag_item"].nil? &&
     !node["percona"]["mysql"]["certificate_databag_item"].empty?
 
-    encryption_key = get_encryption_secret
+    encryption_key = ::SysUtils::get_encryption_secret
     certificates = Chef::EncryptedDataBagItem.load( "certificates-#{node.chef_environment}", 
         node["percona"]["mysql"]["certificate_databag_item"], encryption_key )
 
