@@ -4,11 +4,14 @@
 #
 # Copyright (c) 2014 Fidelity Investments.
 #
+# Author: Mevan Samaratunga
+# Email: mevan.samaratunga@fmr.com
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#       http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -85,16 +88,16 @@ databases_installed = Hash.new
 
 cluster_ips = []
 unless Chef::Config[:solo]
-    search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |other_node|
+    search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |percona_node|
         
-        Chef::Log.info("Found cluster node '#{other_node.name}' for role '#{cluster_role}'.")
+        Chef::Log.info("Found cluster node '#{percona_node.name}' for role '#{cluster_role}'.")
 
-        databases = other_node["percona"]["openstack"]["databases"] if !other_node["percona"]["openstack"].nil?
+        databases = percona_node["percona"]["openstack"]["databases"] if !percona_node["percona"]["openstack"].nil?
         databases_installed.merge!(databases) if !databases.nil?
 
-        next if other_node['private_ipaddress'] == node['private_ipaddress']
-        Chef::Log.info "Found Percona XtraDB cluster peer: #{other_node['private_ipaddress']}"
-        cluster_ips << other_node['private_ipaddress']
+        next if percona_node["ipaddress"]==node["ipaddress"]
+        Chef::Log.info "Found Percona XtraDB cluster peer: #{percona_node['private_ipaddress']}"
+        cluster_ips << percona_node['private_ipaddress']
     end
 end
 

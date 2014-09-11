@@ -4,11 +4,14 @@
 #
 # Copyright (c) 2014 Fidelity Investments.
 #
+# Author: Mevan Samaratunga
+# Email: mevan.samaratunga@fmr.com
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#       http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,24 +32,22 @@ copy_plugins("neutron", node["openstack"]["network"]["source_url"])
 # shared settings from the one of the other nodes
 cluster_role = node["openstack"]["xen"]["cluster_role"]
 
-init_node = nil
+sr_uuid = nil
 unless Chef::Config[:solo]
     search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |xen_node|
         
-        next if xen_node['private_ipaddress'] == node['private_ipaddress']
+        next if xen_node['ipaddress']==node['ipaddress']
 
-        init_node = xen_node
-        Chef::Log.info("Found configured xen node '#{init_node.name}'.")
-        break
+        sr_uuid = (xen_node["xenserver"].nil? ? nil : xen_node["xenserver"]["storage"]["nfs"]["uuid"])
+        if !sr_uuid.nil?
+            Chef::Log.info("Found shared SR with uuid '#{sr_uuid}'.")
+            break
+        end
     end
 end
 
-sr_uuid = (init_node.nil? ? nil : init_node["xenserver"]["storage"]["nfs"]["uuid"])
-Chef::Application.fatal!("Other xen cluster node data does contain the uuid of a shared " + 
-    "xen storage repository.", 999) if !init_node.nil? && (sr_uuid.nil? || sr_uuid.empty?)
-
 sr_name = node['openstack']['xen']['storage']["name"]
-Chef::Application.fatal!("The default storage name must be provided.") if sr_name.nil? || sr_name.empty?
+Chef::Application.fatal!("The default storage name must be provided.", 999) if sr_name.nil? || sr_name.empty?
 
 nfs_server = node["openstack"]["xen"]["storage"]["nfs_server"]
 nfs_path = node["openstack"]["xen"]["storage"]["nfs_serverpath"]
@@ -61,7 +62,7 @@ ruby_block "creating shared support directories used by openstack" do
             image_dir="/var/run/sr-mount/#{sr_uuid}/images"
             shell_out!("mkdir -p \"#{image_dir}\"");
         else
-            Chef::Application.fatal!("No valid shared NFS storage uuid found for the node.")
+            Chef::Application.fatal!("No valid shared NFS storage uuid found for the node.", 999)
         end
     end
     action :nothing
@@ -77,7 +78,7 @@ ruby_block "linking support directories used by openstack" do
             shell_out!("rm -f \"/boot/guest\" && ln -s \"#{guest_kernel_dir}\" \"/boot/guest\"");
             shell_out!("rm -f \"/images\" && ln -s \"#{image_dir}\" \"/images\"");
         else
-            Chef::Application.fatal!("No valid shared NFS storage uuid found for the node.")
+            Chef::Application.fatal!("No valid shared NFS storage uuid found for the node.", 999)
         end
     end
     action :nothing
@@ -85,24 +86,32 @@ end
 
 # Create new shared storage repository
 storage sr_name do
-    type       "nfs"
-    nfs_server nfs_server
-    nfs_path   nfs_path
-    action     :create
-    notifies   :create, "ruby_block[creating shared support directories used by openstack]"
-    notifies   :create, "ruby_block[linking support directories used by openstack]"
-    only_if    { sr_uuid.nil? }
+    type         "nfs"
+    default      true
+    nfs_server   nfs_server
+    nfs_path     nfs_path
+    other_config(
+        "i18n-key" => "local-storage"
+    )
+    action       :create
+    notifies     :create, "ruby_block[creating shared support directories used by openstack]"
+    notifies     :create, "ruby_block[linking support directories used by openstack]"
+    only_if      { sr_uuid.nil? }
 end
 
 # Attach to the storage repository already created for the OpenStack Xen cluster
 storage sr_name do
-    uuid       sr_uuid
-    type       "nfs"
-    nfs_server nfs_server
-    nfs_path   nfs_path
-    action     :attach
-    notifies   :create, "ruby_block[linking support directories used by openstack]"
-    only_if    { !sr_uuid.nil? }
+    uuid         sr_uuid
+    type         "nfs"
+    default      true
+    nfs_server   nfs_server
+    nfs_path     nfs_path
+    other_config(
+        "i18n-key" => "local-storage"
+    )
+    action       :attach
+    notifies     :create, "ruby_block[linking support directories used by openstack]"
+    only_if      { !sr_uuid.nil? }
 end
 
 # Attach to shared ISO storage
