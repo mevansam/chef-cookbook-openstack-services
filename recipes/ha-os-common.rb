@@ -20,14 +20,18 @@
 # limitations under the License.
 #
 
-skip_upstart_patch = node["env"]["skip_upstart_patch"]
-if !skip_upstart_patch
-	# Work around for bug https://bugs.launchpad.net/openstack-chef/+bug/1313646
-	# This code should be removed when chef client 11.14 is available
-	if node['platform'] == 'ubuntu' && node['platform_version'] == '14.04'
-		Chef::Platform.set :platform => :ubuntu, :resource => :service, :provider => Chef::Provider::Service::Upstart
-	end
+class ::Chef::Recipe # rubocop:disable Documentation
+    include ::SysUtils::Helper
 end
+
+############################################################################
+# Work around for bug https://bugs.launchpad.net/openstack-chef/+bug/1313646
+# This code should be removed when chef client 11.14 is available
+skip_upstart_patch = node["env"]["skip_upstart_patch"]
+if !skip_upstart_patch && node['platform'] == 'ubuntu' && node['platform_version'] == '14.04' && node[:chef_packages][:chef][:version] < "11.14"
+	Chef::Platform.set :platform => :ubuntu, :resource => :service, :provider => Chef::Provider::Service::Upstart
+end
+############################################################################
 
 node.override["openstack"]["secret"]["user_passwords_data_bag"] = "os_user_passwords-#{node.chef_environment}"
 node.override["openstack"]["secret"]["db_passwords_data_bag"] = "os_db_passwords-#{node.chef_environment}"
@@ -35,3 +39,13 @@ node.override["openstack"]["secret"]["service_passwords_data_bag"] = "os_service
 node.override["openstack"]["secret"]["secrets_data_bag"] = "os_secrets-#{node.chef_environment}"
 node.override['openstack']['secret']['key_path'] = "/etc/chef/encrypted_data_bag_secret"
 node.override['openstack']['db']['root_user_use_databag'] = true
+
+if node["openstack"]["compute"]["driver"]=="xenapi.XenAPIDriver"
+	xen_host_ip = IO.read("/proc/cmdline")[/host=(\d+\.\d+\.\d+\.\d+)/, 1]
+	if !xen_host_ip.empty?
+		node.override["openstack"]["compute"]["xenapi"]["connection_url"] = "https://#{xen_host_ip}" 
+		node.override['openstack']['network']['xenapi']['connection_url'] = "https://#{xen_host_ip}"
+	else
+		Chef::Application.fatal("Unable to determine Xem Dom0 ip the OpenStack compute worker needs to be associated with.")
+	end
+end

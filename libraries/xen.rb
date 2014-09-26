@@ -20,7 +20,7 @@
 # limitations under the License.
 #
 
-module ::Openstack # rubocop:disable Documentation
+module ::OpenStack # rubocop:disable Documentation
 
     module Xen # rubocop:disable Documentation
 
@@ -75,6 +75,23 @@ module ::Openstack # rubocop:disable Documentation
                 EOH
                 action :nothing
             end
+        end
+
+        def get_management_network
+            return shell("xe pif-list management=true params=network-uuid minimal=true")
+        end
+
+        def get_network_name(uuid)
+            return shell("xe network-list uuid=#{uuid} params=name-label minimal=true")
+        end
+
+        def get_network_bridge(uuid)
+            return shell("xe network-list uuid=#{uuid} params=bridge --minimal")
+        end
+
+        def xenapi_ip_on(bridge)
+            mgt_ip = shell("ifconfig \"#{bridge}\" | awk '/inet addr/ { print substr($2,6) }'")
+            return mgt_ip
         end
     end
 end

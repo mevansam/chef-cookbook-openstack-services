@@ -22,7 +22,7 @@
 
 class ::Chef::Recipe # rubocop:disable Documentation
     include ::SysUtils::Helper
-    include ::Openstack::Xen
+    include ::OpenStack::Xen
 end
 
 copy_plugins("nova", node["openstack"]["compute"]["source_url"])
@@ -137,4 +137,86 @@ if !default_template.nil? && !default_template.empty?
         end
         only_if { shell("xe template-list name-label=\"#{default_template}\" --minimal").empty? }
     end
+end
+
+## Configure Xen Networking
+
+script "set up ip forwarding" do
+    interpreter "bash"
+    user "root"
+    cwd "/tmp"
+    code <<-EOH
+        if [ -a /etc/sysconfig/network ]; then
+            if ! grep -q "FORWARD_IPV4=YES" /etc/sysconfig/network; then
+                # FIXME: This doesn't work on reboot!
+                echo "FORWARD_IPV4=YES" >> /etc/sysconfig/network
+            fi
+        fi
+        echo 1 > /proc/sys/net/ipv4/ip_forward
+    EOH
+end
+
+public_interface_name = node['openstack']['xen']['network']['public_interface']['name']
+public_interface_device = node['openstack']['xen']['network']['public_interface']['device']
+public_interface_mode = node['openstack']['xen']['network']['public_interface']['mode']
+
+if public_interface_device.kind_of?(Array)
+    if public_interface_device.size > 0
+        network_interface public_interface_name do
+            type               "bond"
+            mac_address_prefix "00:00:02:"
+            bond_devices       (public_interface_device.first.start_with?("eth") ? public_interface_device : public_interface_device.first)
+            bond_mode          public_interface_mode
+        end
+    else
+        Chef::Application.fatal!("Bond device list or search string was not provided.", 999)
+    end
+else
+    network_interface name do
+        type "device"
+        device public_interface_device
+    end
+end
+
+node['openstack']['xen']['network']['vlans'].each do |vlan|
+
+    network_interface "#{vlan["name"]}" do
+        type           "vlan"
+        device_network name
+        vlan           "#{vlan["vlan"]}"
+    end
+end
+
+xen_net_name = node['openstack']['xen']['network']['xen_net_name']
+network xen_net_name
+
+mgt_net_uuid = get_management_network
+mgt_net_name = get_network_name(mgt_net_uuid)
+mgt_net_bridge = get_network_bridge(mgt_net_uuid)
+Chef::Log.debug("The management network name is '#{mgt_net_name}' and bridge is '#{mgt_net_bridge}'.")
+
+host_ip = xenapi_ip_on(mgt_net_bridge)
+Chef::Application.fatal!( "XenAPI does not have an assigned IP address on the management network. " + 
+    "please review your XenServer network configuration", 999) if host_ip.empty?
+
+Chef::Log.debug("The management host IP is '#{host_ip}'.")
+
+## Create DomU OpenStack compute VM
+
+vm node['openstack']['xen']['vm']["name"] do
+
+    description "OpenStack DomU Compute (Nova+Neutron) VM"
+
+    template node['openstack']['xen']['vm']['template']
+    cpus     node['openstack']['xen']['vm']['cpus']
+    memory   node['openstack']['xen']['vm']['memory']
+    network  [ node['openstack']['xen']['vm']['network'], public_interface_name ]
+
+    address node['openstack']['xen']['vm']['ip']
+    gateway node['openstack']['xen']['vm']['gateway']
+    netmask node['openstack']['xen']['vm']['netmask']
+    domain node['openstack']['xen']['vm']['domain']
+    dns_servers node['openstack']['xen']['vm']['dns']
+
+    kernel_args "host=#{node["ipaddress"]}"
 end

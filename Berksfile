@@ -10,7 +10,7 @@ cookbook 'build-essential', '1.4.2'
 cookbook 'selinux',         '0.8.0'
 cookbook 'xfs',             '1.1.0'
 
-cookbook 'percona', '0.15.5'
+cookbook 'percona',  git: 'https://github.com/fmr-llc/chef-percona'
 cookbook 'rabbitmq', git: 'https://github.com/kennonkwok/rabbitmq.git'
 cookbook 'statsd',   git: 'https://github.com/att-cloud/cookbook-statsd'
 

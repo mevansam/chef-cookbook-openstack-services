@@ -14,6 +14,9 @@ default["rabbitmq"]["certificate_databag_item"] = nil
 default["percona"]["mysql"]["certificate_databag_item"] = nil
 default["openstack"]["dashboard"]["certificate_databag_item"] = nil
 
+## OpenStack service cluster roles
+default["openstack"]["controller"]["cluster_role"] = "os-ha-controller"
+
 ## Xen Specific Attributes
 
 # Location of nova source
@@ -35,6 +38,29 @@ default['openstack']['xen']['storage']["nfs_serverpath"] = nil
 
 default['openstack']['xen']['storage']["shared_iso_name"] = "Shared ISOs/Templates"
 default['openstack']['xen']['storage']["default_template"] = nil
+
+# Public external network. Usually this is attached to a physical
+# interface that is separate from that of the management network.
+default['openstack']['xen']['network']['public_interface']['name'] = "eth1"
+default['openstack']['xen']['network']['public_interface']['device'] = "eth1"
+default['openstack']['xen']['network']['public_interface']['mode'] = nil
+
+# Xen network OpenStack vm integration bridge
+default['openstack']['xen']['network']['xen_net_name'] = "xennet"
+# Xen VLAN networks not managed by OpenStack
+default['openstack']['xen']['network']['vlans'] = [ ]
+
+## Xen DomU OpenStack Compute VM Configuration
+default['openstack']['xen']['vm']['template'] = nil
+default['openstack']['xen']['vm']['name'] = "#{node["hostname"]}-OpenStack-DomU"
+default['openstack']['xen']['vm']['cpus'] = nil
+default['openstack']['xen']['vm']['memory'] = nil
+default['openstack']['xen']['vm']['network'] = nil
+default['openstack']['xen']['vm']['ip'] = nil
+default['openstack']['xen']['vm']['gateway'] = nil
+default['openstack']['xen']['vm']['netmask'] = nil
+default['openstack']['xen']['vm']['domain'] = nil
+default['openstack']['xen']['vm']['dns'] = nil
 
 ## Load attributes from openstack-common cookbook
 include_attribute "openstack-common::default"
