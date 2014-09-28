@@ -45,8 +45,22 @@ default['openstack']['xen']['network']['public_interface']['name'] = "eth1"
 default['openstack']['xen']['network']['public_interface']['device'] = "eth1"
 default['openstack']['xen']['network']['public_interface']['mode'] = nil
 
-# Xen network OpenStack vm integration bridge
-default['openstack']['xen']['network']['xen_net_name'] = "xennet"
+# Network names that map to above bridges which
+# are populated by the xen-host.rb recipe
+default['openstack']['xen']['network']['vm_network'] = nil
+default['openstack']['xen']['network']['xen_int_network'] = nil
+
+# See https://raw.githubusercontent.com/matelakat/shared/xs-q-v1/xenserver-quantum/deployment.png
+# for xen neutron setup. 
+#
+# Example that maps to deployment.png:
+#
+# default['openstack']['xen']['network']['vm_network_bridge'] = 'xapiY'
+# default['openstack']['xen']['network']['xen_int_network_bridge'] = 'xapiX'
+#
+default['openstack']['xen']['network']['vm_network_bridge'] = nil
+default['openstack']['xen']['network']['xen_int_network_bridge'] = nil
+
 # Xen VLAN networks not managed by OpenStack
 default['openstack']['xen']['network']['vlans'] = [ ]
 

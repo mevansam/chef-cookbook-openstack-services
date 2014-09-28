@@ -172,7 +172,7 @@ if public_interface_device.kind_of?(Array)
         Chef::Application.fatal!("Bond device list or search string was not provided.", 999)
     end
 else
-    network_interface name do
+    network_interface public_interface_name do
         type "device"
         device public_interface_device
     end
@@ -182,13 +182,16 @@ node['openstack']['xen']['network']['vlans'].each do |vlan|
 
     network_interface "#{vlan["name"]}" do
         type           "vlan"
-        device_network name
+        device_network public_interface_name
         vlan           "#{vlan["vlan"]}"
     end
 end
 
-xen_net_name = node['openstack']['xen']['network']['xen_net_name']
-network xen_net_name
+vm_network = node['openstack']['xen']['network']['vm_network']
+network vm_network
+
+xen_int_network = node['openstack']['xen']['network']['xen_int_network']
+network xen_int_network
 
 mgt_net_uuid = get_management_network
 mgt_net_name = get_network_name(mgt_net_uuid)
@@ -203,20 +206,39 @@ Chef::Log.debug("The management host IP is '#{host_ip}'.")
 
 ## Create DomU OpenStack compute VM
 
-vm node['openstack']['xen']['vm']["name"] do
+vm_name = node['openstack']['xen']['vm']["name"]
+
+ruby_block "create domu openstack compute guest" do
+    block do
+        vm_net_uuid = shell("xe network-list name-label=#{vm_network} params=uuid minimal=true")
+        vm_network_bridge = shell("xe network-list uuid=#{vm_net_uuid} params=bridge --minimal")
+
+        Chef::Application.fatal!("Unable to determine the Xen physical bridge name to use for external connectivity") if vm_network_bridge.empty?
+        node.set['openstack']['xen']['network']['vm_network_bridge'] = vm_network_bridge
+
+        xen_int_net_uuid = shell("xe network-list name-label=#{xen_int_network} params=uuid minimal=true")
+        xen_int_network_bridge = shell("xe network-list uuid=#{xen_int_net_uuid} params=bridge --minimal")
+
+        Chef::Application.fatal!("Unable to determine the Xen integration bridge name to use for external connectivity") if xen_int_network_bridge.empty?
+        node.set['openstack']['xen']['network']['xen_int_network_bridge'] = xen_int_network_bridge
+
+        vm = resources("vm[#{vm_name}]")
+        vm.kernel_args "host=#{node["ipaddress"]} vmbridge=#{vm_network_bridge} xenintbridge=#{xen_int_network_bridge}"
+    end
+end
+
+vm vm_name do
 
     description "OpenStack DomU Compute (Nova+Neutron) VM"
 
     template node['openstack']['xen']['vm']['template']
     cpus     node['openstack']['xen']['vm']['cpus']
     memory   node['openstack']['xen']['vm']['memory']
-    network  [ node['openstack']['xen']['vm']['network'], public_interface_name ]
+    network  [ node['openstack']['xen']['vm']['network'], vm_network ]
 
     address node['openstack']['xen']['vm']['ip']
     gateway node['openstack']['xen']['vm']['gateway']
     netmask node['openstack']['xen']['vm']['netmask']
     domain node['openstack']['xen']['vm']['domain']
     dns_servers node['openstack']['xen']['vm']['dns']
-
-    kernel_args "host=#{node["ipaddress"]}"
 end

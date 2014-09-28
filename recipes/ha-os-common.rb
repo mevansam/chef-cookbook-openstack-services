@@ -40,12 +40,32 @@ node.override["openstack"]["secret"]["secrets_data_bag"] = "os_secrets-#{node.ch
 node.override['openstack']['secret']['key_path'] = "/etc/chef/encrypted_data_bag_secret"
 node.override['openstack']['db']['root_user_use_databag'] = true
 
-if node["openstack"]["compute"]["driver"]=="xenapi.XenAPIDriver"
+if node.run_list.expand(node.chef_environment).recipes.include?("openstack-compute::compute") &&
+	node["openstack"]["compute"]["driver"]=="xenapi.XenAPIDriver"
+
 	xen_host_ip = IO.read("/proc/cmdline")[/host=(\d+\.\d+\.\d+\.\d+)/, 1]
 	if !xen_host_ip.empty?
 		node.override["openstack"]["compute"]["xenapi"]["connection_url"] = "https://#{xen_host_ip}" 
 		node.override['openstack']['network']['xenapi']['connection_url'] = "https://#{xen_host_ip}"
-	else
+
+	else !node.override["openstack"]["compute"]["xenapi"]["connection_url"] || 
+		!node.override['openstack']['network']['xenapi']['connection_url']
 		Chef::Application.fatal("Unable to determine Xem Dom0 ip the OpenStack compute worker needs to be associated with.")
+	end
+
+	vm_network_bridge = IO.read("/proc/cmdline")[/vmbridge=(\w+)/, 1]
+	if !vm_network_bridge.empty?
+		node.override['openstack']['xen']['network']['vm_network_bridge'] = vm_network_bridge
+
+	else !node.override['openstack']['xen']['network']['vm_network_bridge']
+		Chef::Application.fatal("Unable to determine VM bridge.")
+	end
+
+	xen_int_network_bridge = IO.read("/proc/cmdline")[/xenintbridge=(\w+)/, 1]
+	if !xen_int_network_bridge.empty?
+		node.override['openstack']['xen']['network']['xen_int_network_bridge'] = xen_int_network_bridge
+
+	else !node.override['openstack']['xen']['network']['xen_int_network_bridge']
+		Chef::Application.fatal("Unable to determine Xen integration bridge.")
 	end
 end

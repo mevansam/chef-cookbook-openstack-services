@@ -69,9 +69,10 @@ module ::OpenStack # rubocop:disable Documentation
                     if [ -n $PLUGINPATH ]; then
                         
                         [ -e #{xapi_plugin_dir}.bak ] || (cp -r #{xapi_plugin_dir} #{xapi_plugin_dir}.bak)
+                        chmod 0755 $PLUGINPATH/*
                         rsync -avr $PLUGINPATH/* #{xapi_plugin_dir}
                     fi
-                    rm -fr $SOURCES
+                    #rm -fr $SOURCES
                 EOH
                 action :nothing
             end
@@ -79,6 +80,10 @@ module ::OpenStack # rubocop:disable Documentation
 
         def get_management_network
             return shell("xe pif-list management=true params=network-uuid minimal=true")
+        end
+
+        def get_network_uuid(name)
+            return shell("xe network-list name-label=#{name} params=uuid minimal=true")
         end
 
         def get_network_name(uuid)
