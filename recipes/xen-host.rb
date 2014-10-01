@@ -234,7 +234,7 @@ vm vm_name do
     template node['openstack']['xen']['vm']['template']
     cpus     node['openstack']['xen']['vm']['cpus']
     memory   node['openstack']['xen']['vm']['memory']
-    network  [ node['openstack']['xen']['vm']['network'], vm_network ]
+    network  [ node['openstack']['xen']['vm']['network'], vm_network, public_interface_name ]
 
     address node['openstack']['xen']['vm']['ip']
     gateway node['openstack']['xen']['vm']['gateway']
