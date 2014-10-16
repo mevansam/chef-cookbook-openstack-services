@@ -1,4 +1,4 @@
-# Copyright 2013, Copyright (c) 2012-2012 Fidelity Investments.
+
 
 ## Additional Percona / MySql options
 default["percona"]["cluster_role"] = "os-ha-database"
@@ -23,7 +23,12 @@ default["openstack"]["controller"]["cluster_role"] = "os-ha-controller"
 default['openstack']['compute']['source_url'] = 'https://github.com/openstack/nova.git'
 
 # Location of neutron source
-default['openstack']['network']['source_url'] = 'https://github.com/openstack/neutron.git'
+default['openstack']['network']['source_url'] = 'https://github.com/mevansam/neutron.git'
+
+# If true then multiple l3_agent.ini files will be created
+# for each configured external network and started as 
+# a clustered pacemaker service.
+default['openstack']['network']['l3']['multiple_external'] = false
 
 # Role identifying the Xen hypervisor cluster
 default["openstack"]["xen"]["cluster_role"] = "os-xen-host"
@@ -47,7 +52,7 @@ default['openstack']['xen']['network']['public_interface']['mode'] = nil
 
 # Network names that map to above bridges which
 # are populated by the xen-host.rb recipe
-default['openstack']['xen']['network']['vm_network'] = nil
+default['openstack']['xen']['network']['xen_trunk_network'] = nil
 default['openstack']['xen']['network']['xen_int_network'] = nil
 
 # See https://raw.githubusercontent.com/matelakat/shared/xs-q-v1/xenserver-quantum/deployment.png

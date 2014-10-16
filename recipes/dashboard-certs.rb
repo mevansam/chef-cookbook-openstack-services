@@ -2,10 +2,10 @@
 # Cookbook Name:: openstack-services
 # Recipe:: ha-database
 #
-# Copyright (c) 2014 Fidelity Investments.
+
 #
 # Author: Mevan Samaratunga
-# Email: mevan.samaratunga@fmr.com
+# Email: mevansam@gmail.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ if node['openstack']['dashboard']['use_ssl'] &&
     !node["openstack"]["dashboard"]["certificate_databag_item"].nil? &&
     !node["openstack"]["dashboard"]["certificate_databag_item"].empty?
 
-    encryption_key = ::SysUtils::get_encryption_secret
+    encryption_key = ::SysUtils::get_encryption_secret(node)
     certificates = Chef::EncryptedDataBagItem.load( "certificates-#{node.chef_environment}", 
         node['openstack']['dashboard']["certificate_databag_item"], encryption_key )
 

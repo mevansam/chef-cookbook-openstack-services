@@ -2,10 +2,10 @@
 # Cookbook Name:: openstack-services
 # Library:: xen
 #
-# Copyright (c) 2014 Fidelity Investments.
+
 #
 # Author: Mevan Samaratunga
-# Email: mevan.samaratunga@fmr.com
+# Email: mevansam@gmail.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ module ::OpenStack # rubocop:disable Documentation
                         chmod 0755 $PLUGINPATH/*
                         rsync -avr $PLUGINPATH/* #{xapi_plugin_dir}
                     fi
-                    #rm -fr $SOURCES
+                    rm -fr $SOURCES
                 EOH
                 action :nothing
             end

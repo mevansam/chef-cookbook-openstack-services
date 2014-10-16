@@ -1,0 +1,22 @@
+#!/bin/bash
+
+RESOURCE_NAME=p_neutron-l3-agent
+
+if [ -n "$(crm resource list | grep $RESOURCE_NAME)" ]; then
+	crm resource stop $RESOURCE_NAME
+	while [ -n "$(crm resource list | grep $RESOURCE_NAME | grep Started)" ]; do 
+	    sleep 1
+	done
+	crm resource cleanup $RESOURCE_NAME
+	crm configure delete $RESOURCE_NAME
+fi
+
+crm configure primitive $RESOURCE_NAME ocf:openstack:neutron-l3-agent \
+    params config="/etc/neutron/neutron.conf" \
+    plugin_config="/etc/neutron/l3_agent.ini" \
+    metadata_agent_config="/etc/neutron/metadata_agent.ini" \
+    neutron_server_port="<%= node['openstack']['endpoints']['mq']['port'] %>" \
+    dns_server_ping_ip="<%= @dns_server %>" \
+    op monitor interval="30s" timeout="30s" \
+    op start timeout="120s" \
+    op stop timeout="120s"

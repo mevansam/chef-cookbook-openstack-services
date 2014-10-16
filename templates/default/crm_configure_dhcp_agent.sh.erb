@@ -1,0 +1,18 @@
+#!/bin/bash
+
+RESOURCE_NAME=p_neutron-dhcp-agent
+
+if [ -n "$(crm resource list | grep $RESOURCE_NAME)" ]; then
+	crm resource stop $RESOURCE_NAME
+	while [ -n "$(crm resource list | grep $RESOURCE_NAME | grep Started)" ]; do 
+	    sleep 1
+	done
+	crm resource cleanup $RESOURCE_NAME
+	crm configure delete $RESOURCE_NAME
+fi
+
+crm configure primitive $RESOURCE_NAME ocf:openstack:neutron-dhcp-agent \
+    params config="/etc/neutron/neutron.conf" \
+    plugin_config="/etc/neutron/dhcp_agent.ini" \
+    amqp_server_port="<%= node['openstack']['endpoints']['mq']['port'] %>" \
+    op monitor interval="30s" timeout="30s"

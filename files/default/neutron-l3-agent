@@ -1,0 +1,639 @@
+#!/bin/sh
+#
+#
+# OpenStack L3 Service (neutron-l3-agent)
+#
+# Description:  Manages an OpenStack L3 Service (neutron-l3-agent) process as an HA resource
+#
+# Authors: Emilien Macchi
+# Mainly inspired by the Nova Network resource agent written by Emilien Macchi & Sebastien Han
+#
+# Support:      openstack@lists.launchpad.net
+# License:      Apache Software License (ASL) 2.0
+#
+#
+# See usage() function below for more details ...
+#
+# OCF instance parameters:
+#   OCF_RESKEY_binary
+#   OCF_RESKEY_config
+#   OCF_RESKEY_plugin_config
+#   OCF_RESKEY_user
+#   OCF_RESKEY_neutron_server_port
+#   OCF_RESKEY_additional_parameters
+#######################################################################
+# Initialization:
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+#######################################################################
+
+# Fill in some defaults if no values are specified
+
+OCF_RESKEY_binary_default="neutron-l3-agent"
+OCF_RESKEY_config_default="/etc/neutron/neutron.conf"
+OCF_RESKEY_plugin_config_default="/etc/neutron/l3_agent.ini"
+OCF_RESKEY_user_default="neutron"
+OCF_RESKEY_neutron_server_port_default="9696"
+
+OCF_RESKEY_metadata_agent_binary_default="neutron-metadata-agent"
+OCF_RESKEY_metadata_agent_config_default="/etc/neutron/metadata_agent.ini"
+
+OCF_RESKEY_dns_server_ping_ip_default="8.8.8.8"
+
+: ${OCF_RESKEY_binary=${OCF_RESKEY_binary_default}}
+: ${OCF_RESKEY_config=${OCF_RESKEY_config_default}}
+: ${OCF_RESKEY_plugin_config=${OCF_RESKEY_plugin_config_default}}
+: ${OCF_RESKEY_user=${OCF_RESKEY_user_default}}
+: ${OCF_RESKEY_neutron_server_port=${OCF_RESKEY_neutron_server_port_default}}
+
+: ${OCF_RESKEY_metadata_agent_binary=${OCF_RESKEY_metadata_agent_binary_default}}
+: ${OCF_RESKEY_metadata_agent_config=${OCF_RESKEY_metadata_agent_config_default}}
+
+: ${OCF_RESKEY_dns_server_ping_ip=${OCF_RESKEY_dns_server_ping_ip_default}}
+
+OCF_RESKEY_pid="${HA_RSCTMP}/$OCF_RESOURCE_INSTANCE.pid"
+OCF_RESKEY_metadata_pid="${HA_RSCTMP}/${OCF_RESOURCE_INSTANCE}-metadata_agent.pid"
+
+#######################################################################
+
+usage() {
+    cat <<UEND
+        usage: $0 (start|stop|validate-all|meta-data|status|monitor)
+
+        $0 manages an OpenStack L3 Service (neutron-l3-agent) process as an HA resource 
+
+        The 'start' operation starts the networking service.
+        The 'stop' operation stops the networking service.
+        The 'validate-all' operation reports whether the parameters are valid
+        The 'meta-data' operation reports this RA's meta-data information
+        The 'status' operation reports whether the networking service is running
+        The 'monitor' operation reports whether the networking service seems to be working
+UEND
+}
+
+meta_data() {
+    cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="neutron-l3-agent">
+<version>1.0</version>
+
+<longdesc lang="en">
+Resource agent for the OpenStack Neutron L3 Service (neutron-l3-agent)
+May manage a neutron-l3-agent instance or a clone set that 
+creates a distributed neutron-l3-agent cluster.
+</longdesc>
+<shortdesc lang="en">Manages the OpenStack L3 Service (neutron-l3-agent)</shortdesc>
+<parameters>
+
+<parameter name="binary" unique="0" required="0">
+<longdesc lang="en">
+Location of the OpenStack L3 Server server binary (neutron-l3-agent)
+</longdesc>
+<shortdesc lang="en">OpenStack L3 Server server binary (neutron-l3-agent)</shortdesc>
+<content type="string" default="${OCF_RESKEY_binary_default}" />
+</parameter>
+
+<parameter name="config" unique="0" required="0">
+<longdesc lang="en">
+Location of the OpenStack Neutron Service (neutron-server) configuration file
+</longdesc>
+<shortdesc lang="en">OpenStack L3 Server (neutron-server) config file</shortdesc>
+<content type="string" default="${OCF_RESKEY_config_default}" />
+</parameter>
+
+<parameter name="plugin_config" unique="0" required="0">
+<longdesc lang="en">
+Location of the OpenStack L3 Service (neutron-l3-agent) configuration file
+</longdesc>
+<shortdesc lang="en">OpenStack L3 Server (neutron-l3-agent) config file</shortdesc>
+<content type="string" default="${OCF_RESKEY_plugin_config_default}" />
+</parameter>
+
+<parameter name="user" unique="0" required="0">
+<longdesc lang="en">
+User running OpenStack L3 Service (neutron-l3-agent)
+</longdesc>
+<shortdesc lang="en">OpenStack L3 Service (neutron-l3-agent) user</shortdesc>
+<content type="string" default="${OCF_RESKEY_user_default}" />
+</parameter>
+
+<parameter name="neutron_server_port" unique="0" required="0">                                                                                                                                                              
+<longdesc lang="en">                                                                                                                                                                                                      
+The listening port number of the AMQP server. Mandatory to perform a monitor check                                                                                                                                        
+</longdesc>                                                                                                                                                                                                               
+<shortdesc lang="en">AMQP listening port</shortdesc>                                                                                                                                                                      
+<content type="integer" default="${OCF_RESKEY_neutron_server_port_default}" />                                                                                                                                              
+</parameter>      
+
+<parameter name="additional_parameters" unique="0" required="0">
+<longdesc lang="en">
+Additional parameters to pass on to the OpenStack L3 Service (neutron-l3-agent)
+</longdesc>
+<shortdesc lang="en">Additional parameters for neutron-l3-agent</shortdesc>
+<content type="string" />
+</parameter>
+
+<parameter name="dns_server_ping_ip" unique="0" required="0">
+<longdesc lang="en">
+The IP of a reachable DNS server to validate connectivity against
+</longdesc>
+<shortdesc lang="en">IP of a reachable DNS server</shortdesc>
+<content type="string" default="${OCF_RESKEY_dns_server_ping_ip_default}" />
+</parameter>
+
+<parameter name="metadata_agent_binary" unique="0" required="0">
+<longdesc lang="en">
+Location of the OpenStack Neutron Metadata Agent server binary (neutron-metadata-agent)
+</longdesc>
+<shortdesc lang="en">OpenStack Neutron Metadata Agent server binary (neutron-metadata-agent)</shortdesc>
+<content type="string" default="${OCF_RESKEY_metadata_agent_binary_default}" />
+</parameter>
+
+<parameter name="metadata_agent_config" unique="0" required="0">
+<longdesc lang="en">
+Location of the OpenStack Metadata agent configuration file
+</longdesc>
+<shortdesc lang="en">OpenStack Metadata (neutron-metadata-agent) config file</shortdesc>
+<content type="string" default="${OCF_RESKEY_metadata_agent_config_default}" />
+</parameter>
+
+</parameters>
+
+<actions>
+<action name="start" timeout="60" />
+<action name="stop" timeout="60" />
+<action name="status" timeout="20" />
+<action name="monitor" timeout="30" interval="20" />
+<action name="validate-all" timeout="5" />
+<action name="meta-data" timeout="5" />
+</actions>
+</resource-agent>
+END
+}
+
+#######################################################################
+# Functions for starting metadata agent alongside the l3 agent
+
+neutron_metadata_agent_validate() {
+    local rc
+
+    check_binary $OCF_RESKEY_metadata_agent_binary
+    check_binary netstat
+    
+    # A config file on shared storage that is not available
+    # during probes is OK.
+    if [ ! -f $OCF_RESKEY_config ]; then
+        if ! ocf_is_probe; then
+            ocf_log err "Config $OCF_RESKEY_config doesn't exist"
+            return $OCF_ERR_INSTALLED
+        fi
+        ocf_log_warn "Config $OCF_RESKEY_config not available during a probe"
+    fi
+
+    getent passwd $OCF_RESKEY_user >/dev/null 2>&1
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        ocf_log err "User $OCF_RESKEY_user doesn't exist"
+        return $OCF_ERR_INSTALLED
+    fi
+
+    true
+}
+
+neutron_metadata_agent_status() {
+    local pid
+    local rc
+
+    if [ ! -f $OCF_RESKEY_metadata_pid ]; then
+        ocf_log info "OpenStack Neutron Metadata Agent (neutron-metadata-agent) is not running"
+        return $OCF_NOT_RUNNING
+    else
+        pid=`cat $OCF_RESKEY_metadata_pid`
+    fi
+
+    ocf_run -warn kill -s 0 $pid
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        return $OCF_SUCCESS
+    else
+        ocf_log info "Old PID file found, but OpenStack Neutron Metadata Agent (neutron-metadata-agent) is not running"
+        return $OCF_NOT_RUNNING
+    fi
+}
+
+neutron_metadata_agent_monitor() {
+    local pid
+    local rc
+
+    if [ ! -f $OCF_RESKEY_metadata_pid ]; then
+        ocf_log info "OpenStack Neutron Metadata Agent (neutron-metadata-agent) is not running"
+        return $OCF_NOT_RUNNING
+    else
+        pid=`cat $OCF_RESKEY_metadata_pid`
+    fi
+
+    ocf_run -warn kill -s 0 $pid
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        return $OCF_SUCCESS
+    else
+        ocf_log info "Old PID file found, but OpenStack Neutron Metadata Agent (neutron-metadata-agent) is not running"
+        return $OCF_NOT_RUNNING
+    fi
+}
+
+neutron_metadata_agent_start() {
+    local rc
+
+    neutron_metadata_agent_status
+    rc=$?
+    if [ $rc -eq $OCF_SUCCESS ]; then
+        ocf_log info "OpenStack Neutron Metadata Agent (neutron-metadata-agent) already running"
+        return $OCF_SUCCESS
+    fi
+
+    # run the actual neutron-server daemon with correct configurations files (server + plugin)
+    # Don't use ocf_run as we're sending the tool's output
+    # straight to /dev/null anyway and using ocf_run would break stdout-redirection here.
+    su ${OCF_RESKEY_user} -s /bin/sh -c "${OCF_RESKEY_metadata_agent_binary} --config-file=$OCF_RESKEY_config \
+        --config-file=$OCF_RESKEY_metadata_agent_config --log-file=/var/log/neutron/metadata.log $OCF_RESKEY_additional_parameters"' >> \
+    /dev/null 2>&1 & echo $!' > $OCF_RESKEY_metadata_pid
+
+    # Spin waiting for the server to come up.
+    # Let the CRM/LRM time us out if required
+    while true; do
+    neutron_metadata_agent_monitor
+    rc=$?
+    [ $rc -eq $OCF_SUCCESS ] && break
+    if [ $rc -ne $OCF_NOT_RUNNING ]; then
+        ocf_log err "OpenStack Neutron Metadata Agent (neutron-metadata-agent) start failed"
+        exit $OCF_ERR_GENERIC
+    fi
+    sleep 1
+    done
+
+    ocf_log info "OpenStack Neutron Metadata Agent (neutron-metadata-agent) started"
+    return $OCF_SUCCESS
+}
+
+neutron_metadata_agent_stop() {
+    local rc
+    local pid
+
+    neutron_metadata_agent_status
+    rc=$?
+    if [ $rc -eq $OCF_NOT_RUNNING ]; then
+        ocf_log info "OpenStack Neutron Metadata Agent (neutron-metadata-agent) already stopped"
+        return $OCF_SUCCESS
+    fi
+
+    # Try SIGTERM
+    pid=`cat $OCF_RESKEY_metadata_pid`
+    ocf_run kill -s TERM $pid
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        ocf_log err "OpenStack Neutron Metadata Agent (neutron-metadata-agent) couldn't be stopped"
+        exit $OCF_ERR_GENERIC
+    fi
+
+    # stop waiting
+    shutdown_timeout=15
+    if [ -n "$OCF_RESKEY_CRM_meta_timeout" ]; then
+        shutdown_timeout=$((($OCF_RESKEY_CRM_meta_timeout/1000)-5))
+    fi
+    count=0
+    while [ $count -lt $shutdown_timeout ]; do
+        neutron_metadata_agent_status
+        rc=$?
+        if [ $rc -eq $OCF_NOT_RUNNING ]; then
+            break
+        fi
+        count=`expr $count + 1`
+        sleep 1
+        ocf_log debug "OpenStack Neutron Metadata Agent (neutron-metadata-agent) still hasn't stopped yet. Waiting ..."
+    done
+
+    neutron_metadata_agent_status
+    rc=$?
+    if [ $rc -ne $OCF_NOT_RUNNING ]; then
+        # SIGTERM didn't help either, try SIGKILL
+        ocf_log info "OpenStack Neutron Metadata Agent (neutron-metadata-agent) failed to stop after ${shutdown_timeout}s \
+          using SIGTERM. Trying SIGKILL ..."
+        ocf_run kill -s KILL $pid
+    fi
+
+    ocf_log info "OpenStack Neutron Metadata Agent (neutron-metadata-agent) stopped"
+
+    rm -f $OCF_RESKEY_metadata_pid
+
+    return $OCF_SUCCESS
+}
+
+#######################################################################
+# Functions invoked by resource manager actions for l3 agent
+
+neutron_l3_agent_cleanup_ovs_router_ports() {
+    local host
+    local net_id
+    local qg
+
+    . /root/openrc
+
+    # Delete the agents from neutron
+    ocf_log info "Removing L3 and Metadata agents from neutron's list of agents"
+    for i in $(neutron --insecure agent-list | awk '/L3 agent|Metadata agent/ { print $2 }'); do
+        ocf_log info "  - Deleting agent $i"
+        neutron --insecure agent-delete $i
+    done
+
+    # Clean up ovs-bridges
+    for i in $(neutron --insecure router-list | awk '$2~/[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+/ {print $2}'); do
+
+        ocf_log info "Starting clean up of OVS ports created for virtual router qrouter-$i"
+
+        if [ -n "$(ip netns | grep qrouter-$i)" ]; then
+
+            for qr in $(ip netns exec qrouter-$i ip addr | awk '$2~/qr-/ { print substr($2,0,length($2)-1) }'); do
+                ocf_log info "  - Deleting port $qr"
+                ovs-vsctl --if-exists del-port $qr
+            done
+
+            qg=$(ip netns exec qrouter-$i ip addr | awk '$2~/qg-/ { print substr($2,0,length($2)-1) }')
+
+            ocf_log info "  - Deleting port $qg"
+            [ -n "$qg" ] && ovs-vsctl --if-exists del-port $qg
+            
+            ocf_log info "  - Deleting qrouter-$i"
+            ip netns delete qrouter-$i
+        else
+            ocf_log info "  - No router namespace qrouter-$i found"
+        fi
+    done
+    ocf_log info "Done cleaning up OVS bridges"
+}
+
+neutron_l3_agent_validate_external_router() {
+    local rc
+    local lock_file
+    local net_id
+    local route_list
+
+    lock=/var/lock/${OCF_RESOURCE_INSTANCE}-ovs.lock
+    if mkdir $lock; then
+
+        . /root/openrc
+        rc=$OCF_SUCCESS
+        
+        for i in $(neutron --insecure router-list | awk '$2~/[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+/ {print $2}'); do
+
+            if [ -z "$(ip netns | grep qrouter-$i)" ]; then
+                ocf_log info "No router namespace qrouter-$i"
+            else
+
+                ping=$(ip netns exec qrouter-$i ping -c 1 $OCF_RESKEY_dns_server_ping_ip)
+                if [ -n "$(echo "$ping" | awk '/100.*% packet loss/ { print "no" }')" ] || \
+                   [ -n "$(echo "$ping" | awk '/Network is unreachable/ { print "no" }')" ]; then
+
+                    ocf_log err "Router qrouter-$i could not ping external DNS"
+                    rc=$OCF_ERR_GENERIC
+                fi
+
+                ocf_log info "Router qrouter-$i successfully pinged external DNS"
+            fi
+        done
+        
+        rm -fr $lock
+    fi
+
+    return rc
+}
+
+neutron_l3_agent_validate() {
+    local rc
+
+    check_binary $OCF_RESKEY_binary
+    check_binary netstat
+
+    # A config file on shared storage that is not available
+    # during probes is OK.
+    if [ ! -f $OCF_RESKEY_config ]; then
+        if ! ocf_is_probe; then
+            ocf_log err "Config $OCF_RESKEY_config doesn't exist"
+            return $OCF_ERR_INSTALLED
+        fi
+        ocf_log_warn "Config $OCF_RESKEY_config not available during a probe"
+    fi
+
+    getent passwd $OCF_RESKEY_user >/dev/null 2>&1
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        ocf_log err "User $OCF_RESKEY_user doesn't exist"
+        return $OCF_ERR_INSTALLED
+    fi
+
+    true
+}
+
+neutron_agent_status() {
+    local pid
+    local rc
+
+    if [ ! -f $1 ]; then
+        ocf_log info "$2 is not running"
+        return $OCF_NOT_RUNNING
+    else
+        pid=`cat $1`
+    fi
+
+    ocf_run -warn kill -s 0 $pid
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        return $OCF_SUCCESS
+    else
+        ocf_log info "Old PID file found, but $2 is not running"
+        return $OCF_NOT_RUNNING
+    fi
+}
+
+neutron_l3_agent_monitor() {
+    local rc
+    local pid
+    local network_amqp_check
+    
+    neutron_agent_status $OCF_RESKEY_pid "OpenStack L3 agent"
+    rc=$?
+
+    # If status returned anything but success, return that immediately
+    if [ $rc -ne $OCF_SUCCESS ]; then
+        return $rc
+    fi
+
+    neutron_l3_agent_validate_external_router &
+
+    # Check the connections according to the PID.
+    # We are sure to hit the scheduler process and not other Neutron process with the same connection behavior (for example neutron-server)
+    pid=`cat $OCF_RESKEY_pid`
+    # check the connections according to the PID
+    network_amqp_check=`netstat -punt | grep -s "$OCF_RESKEY_neutron_server_port" | grep -s "$pid" | grep -qs "ESTABLISHED"`
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        ocf_log err "Neutron L3 Server is not connected to the Neutron server: $rc"
+        return $OCF_NOT_RUNNING
+    fi
+
+    ocf_log debug "OpenStack L3 Server (neutron-l3-agent) monitor succeeded"
+
+    neutron_metadata_agent_monitor
+    rc=$?
+    if [ $rc -ne $OCF_SUCCESS ]; then
+        return $rc
+    fi
+
+    return $OCF_SUCCESS
+}
+
+neutron_l3_agent_start() {
+    local rc
+
+    # Start the metadata agent first
+    neutron_metadata_agent_start
+    rc=$?
+    if [ $rc -ne $OCF_SUCCESS ]; then
+        ocf_log err "Error starting metadata agent"
+        return $rc
+    fi
+
+    # Check if l3 agent is already running
+    neutron_agent_status $OCF_RESKEY_pid "OpenStack L3 agent"
+    rc=$?
+    if [ $rc -eq $OCF_SUCCESS ]; then
+        ocf_log info "OpenStack L3 Server (neutron-l3-agent) already running"
+        return $OCF_SUCCESS
+    fi
+
+    # run the actual neutron-l3-agent daemon. Don't use ocf_run as we're sending the tool's output
+    # straight to /dev/null anyway and using ocf_run would break stdout-redirection here.
+    ocf_log info "Starting OpenStack L3 agent"
+
+    rm -fr /var/lock/${OCF_RESOURCE_INSTANCE}-ovs.lock
+
+    sudo service neutron-plugin-openvswitch-agent restart
+    su ${OCF_RESKEY_user} -s /bin/sh -c "${OCF_RESKEY_binary} \
+       --config-file=$OCF_RESKEY_config \
+       --config-file=$OCF_RESKEY_plugin_config \
+       --log-file=/var/log/neutron/l3-agent.log \
+       $OCF_RESKEY_additional_parameters"' >> \
+	/dev/null 2>&1 & echo $!' > $OCF_RESKEY_pid
+
+    # Spin waiting for the server to come up.
+    # Let the CRM/LRM time us out if required
+    while true; do
+        neutron_l3_agent_monitor
+        rc=$?
+        [ $rc -eq $OCF_SUCCESS ] && break
+        if [ $rc -ne $OCF_NOT_RUNNING ]; then
+            ocf_log err "OpenStack L3 Server (neutron-l3-agent) start failed"
+            exit $OCF_ERR_GENERIC
+        fi
+        sleep 1
+    done
+
+    ocf_log info "OpenStack L3 Server (neutron-l3-agent) started"
+    return $OCF_SUCCESS
+}
+
+neutron_agent_stop() {
+    local rc
+    local pid
+
+    pidfile=$1
+    name=$2
+
+    neutron_agent_status $pidfile $name
+    rc=$?
+    if [ $rc -eq $OCF_NOT_RUNNING ]; then
+        ocf_log info "$name already stopped"
+        return $OCF_SUCCESS
+    fi
+
+    # Try SIGTERM
+    pid=`cat $pidfile`
+    ocf_run kill -s TERM $pid
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        ocf_log err "$name couldn't be stopped"
+        exit $OCF_ERR_GENERIC
+    fi
+
+    # stop waiting
+    shutdown_timeout=15
+    if [ -n "$OCF_RESKEY_CRM_meta_timeout" ]; then
+        shutdown_timeout=$((($OCF_RESKEY_CRM_meta_timeout/1000)-5))
+    fi
+    count=0
+    while [ $count -lt $shutdown_timeout ]; do
+        neutron_agent_status $pidfile $name
+        rc=$?
+        if [ $rc -eq $OCF_NOT_RUNNING ]; then
+            break
+        fi
+        count=`expr $count + 1`
+        sleep 1
+        ocf_log debug "$name still hasn't stopped yet. Waiting ..."
+    done
+
+    neutron_agent_status $pidfile $name
+    rc=$?
+    if [ $rc -ne $OCF_NOT_RUNNING ]; then
+        # SIGTERM didn't help either, try SIGKILL
+        ocf_log info "$name failed to stop after ${shutdown_timeout}s \
+          using SIGTERM. Trying SIGKILL ..."
+        ocf_run kill -s KILL $pid
+    fi
+
+    pid=$(ps -ef | grep neutron-ns-metadata-proxy | awk '/python/ { print $2 }')
+    if [ -n "$pid" ]; then
+        kill -9 $pid
+    fi
+
+    ocf_log info "$name stopped"
+    neutron_l3_agent_cleanup_ovs_router_ports
+
+    rm -f $pidfile
+
+    # Stop the metadata agent
+    neutron_metadata_agent_stop
+    rc=$?
+    if [ $rc -ne $OCF_SUCCESS ]; then
+        ocf_log err "Error stopping metadata agent"
+        return $rc
+    fi
+
+    return $OCF_SUCCESS
+}
+
+#######################################################################
+
+case "$1" in
+  meta-data)    meta_data
+                exit $OCF_SUCCESS;;
+  usage|help)   usage
+                exit $OCF_SUCCESS;;
+esac
+
+neutron_metadata_agent_validate || exit $?
+neutron_l3_agent_validate || exit $?
+
+# What kind of method was invoked?
+case "$1" in
+  start)        neutron_l3_agent_start;;
+  stop)         neutron_agent_stop $OCF_RESKEY_pid "OpenStack L3 agent";;
+  status)       neutron_agent_status $OCF_RESKEY_pid "OpenStack L3 agent";;
+  monitor)      neutron_l3_agent_monitor;;
+  validate-all) ;;
+  *)            usage
+                exit $OCF_ERR_UNIMPLEMENTED;;
+esac

@@ -2,10 +2,10 @@
 # Cookbook Name:: openstack-services
 # Recipe:: ha-os-common
 #
-# Copyright (c) 2014 Fidelity Investments.
+
 #
 # Author: Mevan Samaratunga
-# Email: mevan.samaratunga@fmr.com
+# Email: mevansam@gmail.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,21 +43,31 @@ node.override['openstack']['db']['root_user_use_databag'] = true
 if node.run_list.expand(node.chef_environment).recipes.include?("openstack-compute::compute") &&
 	node["openstack"]["compute"]["driver"]=="xenapi.XenAPIDriver"
 
-	xen_host_ip = IO.read("/proc/cmdline")[/host=(\d+\.\d+\.\d+\.\d+)/, 1]
+	xen_host_ip = IO.read("/proc/cmdline")[/hostip=(\d+\.\d+\.\d+\.\d+)/, 1]
 	if !xen_host_ip.empty?
 		node.override["openstack"]["compute"]["xenapi"]["connection_url"] = "https://#{xen_host_ip}" 
 		node.override['openstack']['network']['xenapi']['connection_url'] = "https://#{xen_host_ip}"
+		node.override['openstack']['xen']['host_ip'] = xen_host_ip
 
 	else !node.override["openstack"]["compute"]["xenapi"]["connection_url"] || 
-		!node.override['openstack']['network']['xenapi']['connection_url']
+		!node.override['openstack']['network']['xenapi']['connection_url'] ||
+		!node.override['openstack']['xen']['host_ip']
 		Chef::Application.fatal("Unable to determine Xem Dom0 ip the OpenStack compute worker needs to be associated with.")
 	end
 
-	vm_network_bridge = IO.read("/proc/cmdline")[/vmbridge=(\w+)/, 1]
-	if !vm_network_bridge.empty?
-		node.override['openstack']['xen']['network']['vm_network_bridge'] = vm_network_bridge
+	xen_host_name = IO.read("/proc/cmdline")[/hostname=(\w+)/, 1]
+	if !xen_host_name.empty?
+		node.override['openstack']['xen']['host_name'] = xen_host_name
 
-	else !node.override['openstack']['xen']['network']['vm_network_bridge']
+	else !node.override['openstack']['xen']['host_name']
+		Chef::Application.fatal("Unable to determine Xem Dom0 host name the OpenStack compute worker needs to be associated with.")
+	end
+
+	xen_trunk_network_bridge = IO.read("/proc/cmdline")[/xentrunkbridge=(\w+)/, 1]
+	if !xen_trunk_network_bridge.empty?
+		node.override['openstack']['xen']['network']['xen_trunk_network_bridge'] = xen_trunk_network_bridge
+
+	else !node.override['openstack']['xen']['network']['xen_trunk_network_bridge']
 		Chef::Application.fatal("Unable to determine VM bridge.")
 	end
 

@@ -2,10 +2,10 @@
 # Cookbook Name:: openstack-services
 # Recipe:: xenserver
 #
-# Copyright (c) 2014 Fidelity Investments.
+
 #
 # Author: Mevan Samaratunga
-# Email: mevan.samaratunga@fmr.com
+# Email: mevansam@gmail.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -178,17 +178,61 @@ else
     end
 end
 
-node['openstack']['xen']['network']['vlans'].each do |vlan|
+data_network = node["openstack"]["xen"]["data_network"]["name"]
 
-    network_interface "#{vlan["name"]}" do
-        type           "vlan"
-        device_network public_interface_name
-        vlan           "#{vlan["vlan"]}"
+node["openstack"]["xen"]["network"]["vlans"].each do |vlan|
+
+    if vlan["name"] == data_network
+
+        dns_servers = node["openstack"]["xen"]["data_network"]["dns"].split.join(",")
+        
+        network_interface "#{vlan["name"]}" do
+            type            "vlan"
+            device_network  public_interface_name
+            vlan            "#{vlan["vlan"]}"
+
+            ip_address      node["openstack"]["xen"]["data_network"]["ip"]
+            gateway_address node["openstack"]["xen"]["data_network"]["gateway"]
+            network_mask    node["openstack"]["xen"]["data_network"]["netmask"]
+            dns_servers     dns_servers
+        end
+    else
+        network_interface "#{vlan["name"]}" do
+            type           "vlan"
+            device_network public_interface_name
+            vlan           "#{vlan["vlan"]}"
+        end
     end
 end
 
-vm_network = node['openstack']['xen']['network']['vm_network']
-network vm_network
+xen_trunk_network = node['openstack']['xen']['network']['xen_trunk_network']
+network xen_trunk_network do
+    notifies :create, "ruby_block[set up trunk bridge]"
+end
+
+ruby_block "set up trunk bridge" do
+    block do
+        trunk_bridge = shell("xe network-list name-label=#{xen_trunk_network} params=bridge --minimal")
+        Chef::Application.fatal!("Xen trunk network #{xen_trunk_network} does not exist.") if trunk_bridge.empty?
+
+        public_bridge = shell("xe network-list name-label=#{public_interface_name} params=bridge --minimal")
+        Chef::Application.fatal!("Xen public network #{public_interface_name} does not exist.") if public_bridge.empty?
+
+        patch_trunk_public = "patch-#{trunk_bridge}-#{public_bridge}"
+        shell!("ovs-vsctl --timeout=10 -- --if-exists del-port #{trunk_bridge} #{patch_trunk_public}")
+
+        patch_public_trunk = "patch-#{public_bridge}-#{trunk_bridge}"
+        shell!("ovs-vsctl --timeout=10 -- --if-exists del-port #{public_bridge} #{patch_public_trunk}")
+
+        shell!( "ovs-vsctl --timeout=10 " + 
+            "-- --may-exist add-port #{trunk_bridge} #{patch_trunk_public} " + 
+            "-- set Interface #{patch_trunk_public} type=patch options:peer=#{patch_public_trunk}" )
+
+        shell!( "ovs-vsctl --timeout=10 " + 
+            "-- --may-exist add-port #{public_bridge} #{patch_public_trunk} " + 
+            "-- set Interface #{patch_public_trunk} type=patch options:peer=#{patch_trunk_public}" )
+    end
+end
 
 xen_int_network = node['openstack']['xen']['network']['xen_int_network']
 network xen_int_network
@@ -210,11 +254,11 @@ vm_name = node['openstack']['xen']['vm']["name"]
 
 ruby_block "create domu openstack compute guest" do
     block do
-        vm_net_uuid = shell("xe network-list name-label=#{vm_network} params=uuid minimal=true")
-        vm_network_bridge = shell("xe network-list uuid=#{vm_net_uuid} params=bridge --minimal")
+        xen_trunk_net_uuid = shell("xe network-list name-label=#{xen_trunk_network} params=uuid minimal=true")
+        xen_trunk_network_bridge = shell("xe network-list uuid=#{xen_trunk_net_uuid} params=bridge --minimal")
 
-        Chef::Application.fatal!("Unable to determine the Xen physical bridge name to use for external connectivity") if vm_network_bridge.empty?
-        node.set['openstack']['xen']['network']['vm_network_bridge'] = vm_network_bridge
+        Chef::Application.fatal!("Unable to determine the Xen physical bridge name to use for external connectivity") if xen_trunk_network_bridge.empty?
+        node.set['openstack']['xen']['network']['xen_trunk_network_bridge'] = xen_trunk_network_bridge
 
         xen_int_net_uuid = shell("xe network-list name-label=#{xen_int_network} params=uuid minimal=true")
         xen_int_network_bridge = shell("xe network-list uuid=#{xen_int_net_uuid} params=bridge --minimal")
@@ -223,7 +267,8 @@ ruby_block "create domu openstack compute guest" do
         node.set['openstack']['xen']['network']['xen_int_network_bridge'] = xen_int_network_bridge
 
         vm = resources("vm[#{vm_name}]")
-        vm.kernel_args "host=#{node["ipaddress"]} vmbridge=#{vm_network_bridge} xenintbridge=#{xen_int_network_bridge}"
+        vm.kernel_args "hostip=#{node["openstack"]["xen"]["data_network"]["ip"]} hostname=#{node["hostname"]} " + 
+            "xentrunkbridge=#{xen_trunk_network_bridge} xenintbridge=#{xen_int_network_bridge}"
     end
 end
 
@@ -234,7 +279,7 @@ vm vm_name do
     template node['openstack']['xen']['vm']['template']
     cpus     node['openstack']['xen']['vm']['cpus']
     memory   node['openstack']['xen']['vm']['memory']
-    network  [ node['openstack']['xen']['vm']['network'], vm_network, public_interface_name ]
+    network  [ node['openstack']['xen']['vm']['network'], public_interface_name ]
 
     address node['openstack']['xen']['vm']['ip']
     gateway node['openstack']['xen']['vm']['gateway']
