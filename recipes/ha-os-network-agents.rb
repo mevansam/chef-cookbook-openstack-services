@@ -60,6 +60,7 @@ if is_clustered
     if do_init_cluster
         ruby_block "configure common crm properties" do
             block do
+                sleep 30
                 shell!("crm configure property stonith-enabled=\"false\"")
                 shell!("crm configure property no-quorum-policy=\"ignore\"")
                 shell!("crm configure property pe-warn-series-max=\"1000\"")
@@ -190,13 +191,13 @@ if is_clustered
 
     ruby_block "start cluster DHCP agent service" do
         block do
-            shell!("/etc/corosync/crm_configure_dhcp_agent.sh")
+            shell!("/etc/corosync/crm_configure_dhcp_agent.sh 1>/var/log/neutron/crm_configure_dhcp_agent.log 2>&1 3>&1")
         end
         action :nothing
     end
     ruby_block "start cluster L3 agent service" do
         block do
-            shell!("/etc/corosync/crm_configure_l3_agent.sh")
+            shell!("/etc/corosync/crm_configure_l3_agent.sh 1>/var/log/neutron/crm_configure_l3_agent.log 2>&1 3>&1")
         end
         action :nothing
     end

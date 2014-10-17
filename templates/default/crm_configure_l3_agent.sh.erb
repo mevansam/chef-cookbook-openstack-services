@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 RESOURCE_NAME=p_neutron-l3-agent
 
 if [ -n "$(crm resource list | grep $RESOURCE_NAME)" ]; then
