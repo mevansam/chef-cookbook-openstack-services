@@ -343,8 +343,11 @@ neutron_l3_agent_cleanup_ovs_router_ports() {
     . /root/openrc
 
     # Delete the agents from neutron
+    hostname=`hostname`
+    name=${hostname%%.*}
+
     ocf_log info "Removing L3 and Metadata agents from neutron's list of agents"
-    for i in $(neutron --insecure agent-list | awk '/L3 agent|Metadata agent/ { print $2 }'); do
+    for i in $(neutron --insecure agent-list | grep "$name" | awk '/L3 agent|Metadata agent/ { print $2 }'); do
         ocf_log info "  - Deleting agent $i"
         neutron --insecure agent-delete $i
     done

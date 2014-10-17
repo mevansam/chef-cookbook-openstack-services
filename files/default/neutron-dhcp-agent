@@ -161,8 +161,11 @@ neutron_dhcp_agent_cleanup_ovs_ports() {
     . /root/openrc
 
     # Delete the agents from neutron
+    hostname=`hostname`
+    name=${hostname%%.*}
+
     ocf_log info "Removing DHCP agent from neutron's list of agents"
-    for i in $(neutron --insecure agent-list | awk '/DHCP agent/ { print $2 }'); do
+    for i in $(neutron --insecure agent-list | grep "$name" | awk '/DHCP agent/ { print $2 }'); do
         ocf_log info "  - Deleting agent $i"
         neutron --insecure agent-delete $i
     done

@@ -42,28 +42,34 @@ if is_clustered
 
     include_recipe 'sysutils::cluster'
     
-    cluster_dc = shell("crm status | awk '/Current DC:/ { print $3 }'")
-    do_init_cluster = (cluster_dc==node["hostname"])
+    do_init_cluster = !node["cluster_initializing_node"].nil? && node["cluster_initializing_node"]
+    Chef::Log.info("Cluster initializing node: #{node["hostname"]}/#{do_init_cluster}")
 
     directory "/usr/lib/ocf/resource.d/openstack"
     cookbook_file "neutron-dhcp-agent" do
         path "/usr/lib/ocf/resource.d/openstack/neutron-dhcp-agent"
         mode 00744
-        notifies :run, "ruby_block[start cluster DHCP agent service]" if do_init_cluster
+        notifies :run, "ruby_block[start cluster DHCP agent service]", :delayed if do_init_cluster
     end
     cookbook_file "neutron-l3-agent" do
         path "/usr/lib/ocf/resource.d/openstack/neutron-l3-agent"
         mode 00744
-        notifies :run, "ruby_block[start cluster DHCP agent service]" if do_init_cluster
+        notifies :run, "ruby_block[start cluster L3 agent service]", :delayed if do_init_cluster
     end
 
     if do_init_cluster
-        shell!("crm configure property stonith-enabled=\"false\"")
-        shell!("crm configure property no-quorum-policy=\"ignore\"")
-        shell!("crm configure property pe-warn-series-max=\"1000\"")
-        shell!("crm configure property pe-input-series-max=\"1000\"")
-        shell!("crm configure property pe-error-series-max=\"1000\"")
-        shell!("crm configure property cluster-recheck-interval=\"5min\"")
+        ruby_block "configure common crm properties" do
+            block do
+                shell!("crm configure property stonith-enabled=\"false\"")
+                shell!("crm configure property no-quorum-policy=\"ignore\"")
+                shell!("crm configure property pe-warn-series-max=\"1000\"")
+                shell!("crm configure property pe-input-series-max=\"1000\"")
+                shell!("crm configure property pe-error-series-max=\"1000\"")
+                shell!("crm configure property cluster-recheck-interval=\"5min\"")
+            end
+            action :nothing
+            subscribes :run, "script[restart cluster node services]", :immediately
+        end
     end
 end
 
@@ -110,7 +116,7 @@ template '/etc/neutron/dhcp_agent.ini' do
     group node['openstack']['network']['platform']['group']
     mode 00644
     if is_clustered
-        notifies :run, "ruby_block[start cluster DHCP agent service]" if do_init_cluster
+        notifies :run, "ruby_block[start cluster DHCP agent service]", :delayed if do_init_cluster
     else
         notifies :restart, "service[neutron-dhcp-agent]"
     end
@@ -123,7 +129,7 @@ template '/etc/neutron/dnsmasq.conf' do
     group node['openstack']['network']['platform']['group']
     mode 00644
     if is_clustered
-        notifies :run, "ruby_block[start cluster DHCP agent service]" if do_init_cluster
+        notifies :run, "ruby_block[start cluster DHCP agent service]", :delayed if do_init_cluster
     else
         notifies :restart, "service[neutron-dhcp-agent]"
     end
@@ -141,7 +147,7 @@ template '/etc/neutron/metadata_agent.ini' do
         service_pass: service_pass
     )
     if is_clustered
-        notifies :run, "ruby_block[start cluster L3 agent service]" if do_init_cluster
+        notifies :run, "ruby_block[start cluster L3 agent service]", :delayed if do_init_cluster
     else
         notifies :restart, "service[neutron-metadata-agent]"
     end
@@ -154,7 +160,7 @@ template '/etc/neutron/l3_agent.ini' do
     group node['openstack']['network']['platform']['group']
     mode 00644
     if is_clustered
-        notifies :run, "ruby_block[start cluster L3 agent service]" if do_init_cluster
+        notifies :run, "ruby_block[start cluster L3 agent service]", :delayed if do_init_cluster
     else
         notifies :restart, "service[neutron-l3-agent]"
     end
@@ -170,7 +176,7 @@ if is_clustered
     template "/etc/corosync/crm_configure_dhcp_agent.sh" do
         source 'crm_configure_dhcp_agent.sh.erb'
         mode 00744
-        notifies :run, "ruby_block[start cluster DHCP agent service]" if do_init_cluster
+        notifies :run, "ruby_block[start cluster DHCP agent service]", :delayed if do_init_cluster
     end
 
     template "/etc/corosync/crm_configure_l3_agent.sh" do
@@ -179,7 +185,7 @@ if is_clustered
         variables(
             dns_server: dns_servers[0]
         )
-        notifies :run, "ruby_block[start cluster L3 agent service]" if do_init_cluster
+        notifies :run, "ruby_block[start cluster L3 agent service]", :delayed if do_init_cluster
     end
 
     ruby_block "start cluster DHCP agent service" do
