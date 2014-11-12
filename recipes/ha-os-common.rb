@@ -27,10 +27,10 @@ end
 ############################################################################
 # Work around for bug https://bugs.launchpad.net/openstack-chef/+bug/1313646
 # This code should be removed when chef client 11.14 is available
-skip_upstart_patch = node["env"]["skip_upstart_patch"]
-if !skip_upstart_patch && node['platform'] == 'ubuntu' && node['platform_version'] == '14.04' && node[:chef_packages][:chef][:version] < "11.14"
-	Chef::Platform.set :platform => :ubuntu, :resource => :service, :provider => Chef::Provider::Service::Upstart
-end
+# skip_upstart_patch = node["env"]["skip_upstart_patch"]
+# if !skip_upstart_patch && node['platform'] == 'ubuntu' && node['platform_version'] == '14.04' && node[:chef_packages][:chef][:version] < "11.14"
+# 	Chef::Platform.set :platform => :ubuntu, :resource => :service, :provider => Chef::Provider::Service::Upstart
+# end
 ############################################################################
 
 node.override["openstack"]["secret"]["user_passwords_data_bag"] = "os_user_passwords-#{node.chef_environment}"
