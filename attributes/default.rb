@@ -9,6 +9,9 @@ default["percona"]["mysql"]["certificate_databag_item"] = nil
 
 default["percona"]["openstack"]["services"] = [ ]
 
+## Additional Messaging RabbitMQ options
+default["rabbitmq"]["cluster_role"] = "os-ha-messaging"
+
 ## Attributes that identify the databags containing SSL certificate data
 default["rabbitmq"]["certificate_databag_item"] = nil
 default["percona"]["mysql"]["certificate_databag_item"] = nil
