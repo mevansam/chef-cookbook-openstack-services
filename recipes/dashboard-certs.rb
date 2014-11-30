@@ -2,8 +2,6 @@
 # Cookbook Name:: openstack-services
 # Recipe:: ha-database
 #
-
-#
 # Author: Mevan Samaratunga
 # Email: mevansam@gmail.com
 #

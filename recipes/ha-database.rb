@@ -2,8 +2,6 @@
 # Cookbook Name:: openstack-services
 # Recipe:: ha-database
 #
-
-#
 # Author: Mevan Samaratunga
 # Email: mevansam@gmail.com
 #
@@ -97,7 +95,7 @@ unless Chef::Config[:solo]
         databases_installed.merge!(databases) if !databases.nil?
 
         next if percona_node["ipaddress"]==node["ipaddress"]
-        Chef::Log.info "Found Percona XtraDB cluster peer: #{percona_node['private_ipaddress']}"
+        Chef::Log.info "Found Percona XtraDB cluster peer: #{percona_node['ipaddress']}"
         cluster_ips << percona_node['private_ipaddress']
     end
 end
@@ -135,12 +133,10 @@ include_recipe 'percona::cluster'
 include_recipe 'percona::backup'
 include_recipe 'percona::toolkit'
 
-# Create openstack databases
+## Create openstack databases
+
 openstack_proxy = node["env"]["openstack_proxy"]
 openstack_proxy_name = openstack_proxy.split('.').first
-
-node.set["env"]["skip_upstart_patch"] = true
-include_recipe "openstack-services::ha-os-common"
 
 node["percona"]["openstack"]["services"].each do |service|
 

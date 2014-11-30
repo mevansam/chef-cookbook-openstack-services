@@ -2,8 +2,6 @@
 # Cookbook Name:: openstack-services
 # Recipe:: ha-os-network-agents
 #
-
-#
 # Author: Mevan Samaratunga
 # Email: mevansam@gmail.com
 #

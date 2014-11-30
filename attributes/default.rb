@@ -1,4 +1,4 @@
-
+## OpenStack HA services attributes
 
 ## Additional Percona / MySql options
 default["percona"]["cluster_role"] = "os-ha-database"
@@ -16,6 +16,15 @@ default["rabbitmq"]["cluster_role"] = "os-ha-messaging"
 default["rabbitmq"]["certificate_databag_item"] = nil
 default["percona"]["mysql"]["certificate_databag_item"] = nil
 default["openstack"]["dashboard"]["certificate_databag_item"] = nil
+
+## Openstack cookbook overrides
+override['openstack']['secret']['key_path'] = "/etc/chef/encrypted_data_bag_secret"
+override['openstack']['db']['root_user_use_databag'] = true
+
+override["openstack"]["secret"]["user_passwords_data_bag"] = "os_user_passwords-#{node.chef_environment}"
+override["openstack"]["secret"]["db_passwords_data_bag"] = "os_db_passwords-#{node.chef_environment}"
+override["openstack"]["secret"]["service_passwords_data_bag"] = "os_service_passwords-#{node.chef_environment}"
+override["openstack"]["secret"]["secrets_data_bag"] = "os_secrets-#{node.chef_environment}"
 
 ## OpenStack service cluster roles
 default["openstack"]["controller"]["cluster_role"] = "os-ha-controller"

@@ -2,8 +2,6 @@
 # Cookbook Name:: openstack-services
 # Recipe:: ha-os-common
 #
-
-#
 # Author: Mevan Samaratunga
 # Email: mevansam@gmail.com
 #
@@ -23,22 +21,6 @@
 class ::Chef::Recipe # rubocop:disable Documentation
     include ::SysUtils::Helper
 end
-
-############################################################################
-# Work around for bug https://bugs.launchpad.net/openstack-chef/+bug/1313646
-# This code should be removed when chef client 11.14 is available
-skip_upstart_patch = node["env"]["skip_upstart_patch"]
-if !skip_upstart_patch
-	Chef::Platform.set :platform => :ubuntu, :resource => :service, :provider => Chef::Provider::Service::Upstart
-end
-############################################################################
-
-node.override["openstack"]["secret"]["user_passwords_data_bag"] = "os_user_passwords-#{node.chef_environment}"
-node.override["openstack"]["secret"]["db_passwords_data_bag"] = "os_db_passwords-#{node.chef_environment}"
-node.override["openstack"]["secret"]["service_passwords_data_bag"] = "os_service_passwords-#{node.chef_environment}"
-node.override["openstack"]["secret"]["secrets_data_bag"] = "os_secrets-#{node.chef_environment}"
-node.override['openstack']['secret']['key_path'] = "/etc/chef/encrypted_data_bag_secret"
-node.override['openstack']['db']['root_user_use_databag'] = true
 
 if node.run_list.expand(node.chef_environment).recipes.include?("openstack-compute::compute") &&
 	node["openstack"]["compute"]["driver"]=="xenapi.XenAPIDriver"

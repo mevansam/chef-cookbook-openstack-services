@@ -2,8 +2,6 @@
 # Cookbook Name:: openstack-services
 # Recipe:: xenserver
 #
-
-#
 # Author: Mevan Samaratunga
 # Email: mevansam@gmail.com
 #
