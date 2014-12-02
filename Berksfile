@@ -9,6 +9,8 @@ cookbook 'yum-epel',        '0.4.0'
 cookbook 'build-essential', '1.4.2'
 cookbook 'selinux',         '0.8.0'
 cookbook 'xfs',             '1.1.0'
+cookbook 'hostsfile',       '~> 2.4.5'
+cookbook 'haproxy',         '~> 1.6.6'
 
 cookbook 'percona',  git: 'https://github.com/mevansam/chef-percona'
 cookbook 'rabbitmq', git: 'https://github.com/kennonkwok/rabbitmq.git'

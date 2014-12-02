@@ -27,7 +27,7 @@ if node["percona"]["mysql"]["ssl"] &&
     !node["percona"]["mysql"]["certificate_databag_item"].nil? &&
     !node["percona"]["mysql"]["certificate_databag_item"].empty?
 
-    encryption_key = ::SysUtils::get_encryption_secret
+    encryption_key = ::SysUtils::get_encryption_secret(node)
     certificates = Chef::EncryptedDataBagItem.load( "certificates-#{node.chef_environment}", 
         node["percona"]["mysql"]["certificate_databag_item"], encryption_key )
 
@@ -135,7 +135,7 @@ include_recipe 'percona::toolkit'
 
 ## Create openstack databases
 
-openstack_proxy = node["env"]["openstack_proxy"]
+openstack_proxy = node["openstack"]["openstack_ha_proxy"]
 openstack_proxy_name = openstack_proxy.split('.').first
 
 node["percona"]["openstack"]["services"].each do |service|
@@ -154,7 +154,7 @@ node["percona"]["openstack"]["services"].each do |service|
             action :nothing
         end
 
-        script "Creating database '#{db_name} for service #{service} with user/passwd '#{db_user}." do
+        script "Creating database '#{db_name}' for service '#{service}' with user/passwd '#{db_user}'." do
             interpreter "bash"
             user "root"
             cwd "/tmp"
@@ -165,12 +165,16 @@ node["percona"]["openstack"]["services"].each do |service|
                     DROP USER '#{db_user}'@'localhost'; \
                     DROP DATABASE IF EXISTS #{db_name};"
 
+                [ $? -eq 0 ] || exit $?
+
                 mysql -e " \
                     CREATE DATABASE #{db_name}; \
                     GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'#{openstack_proxy}' IDENTIFIED BY '#{db_password}'; \
                     GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'#{openstack_proxy_name}' IDENTIFIED BY '#{db_password}'; \
                     GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'localhost' IDENTIFIED BY '#{db_password}'; \
                     GRANT ALL PRIVILEGES ON #{db_name}.* TO '#{db_user}'@'%' IDENTIFIED BY '#{db_password}';"
+
+                [ $? -eq 0 ] || exit $?
             EOH
             notifies :create, resources(:ruby_block => "flag database for service '#{service}' was installed successfully"), :immediately
         end
