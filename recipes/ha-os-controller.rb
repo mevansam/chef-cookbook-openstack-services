@@ -23,13 +23,11 @@
 cluster_role = node["openstack"]["controller"]["cluster_role"]
 
 nova_initialized = false
-unless Chef::Config[:solo]
-    search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |controller_node|
-        
-        next if controller_node['ipaddress']==node['ipaddress']
+search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |controller_node|
+    
+    next if controller_node['ipaddress']==node['ipaddress']
 
-        nova_initialized ||= (controller_node["openstack"].nil? ? false : controller_node["openstack"]["compute"]["initialized"])
-    end
+    nova_initialized ||= (controller_node["openstack"].nil? ? false : controller_node["openstack"]["compute"]["initialized"])
 end
 
 if !nova_initialized

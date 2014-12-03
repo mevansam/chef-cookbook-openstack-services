@@ -6,6 +6,7 @@ default["upstart"]["services"] = [
     "glance-api",
     "cinder-volume",
     "cinder-scheduler",
+    "cinder-group-active",
     "cinder-api",
     "ceilometer-agent-central",
     "ceilometer-api",
@@ -20,8 +21,12 @@ default["upstart"]["services"] = [
     "nova-consoleauth",
     "nova-api-metadata",
     "nova-compute",
+    "nova-network",
     "neutron-server",
+    "neutron-lb-agent",
+    "neutron-plugin-linuxbridge-agent",
     "neutron-plugin-openvswitch-agent",
+    "neutron-openvswitch-switch",
     "openvswitch-switch",
-    "tgt"
+    "iscsitarget"
 ]

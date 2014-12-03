@@ -72,12 +72,10 @@ end
 cluster_role = node["rabbitmq"]["cluster_role"]
 cluster_disk_nodes = []
 
-unless Chef::Config[:solo]
-    search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |rabbitmq_node|
-        
-        Chef::Log.info("Found cluster node '#{rabbitmq_node.name}' for role '#{cluster_role}': rabbit@$#{rabbitmq_node['hostname']}")
-        cluster_disk_nodes << "rabbit@$#{rabbitmq_node['hostname']}" 
-    end
+search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |rabbitmq_node|
+    
+    Chef::Log.info("Found cluster node '#{rabbitmq_node.name}' for role '#{cluster_role}': rabbit@$#{rabbitmq_node['hostname']}")
+    cluster_disk_nodes << "rabbit@$#{rabbitmq_node['hostname']}" 
 end
 
 node.override['rabbitmq']['cluster_disk_nodes'] = cluster_disk_nodes

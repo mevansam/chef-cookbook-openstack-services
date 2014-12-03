@@ -31,16 +31,14 @@ copy_plugins("neutron", node["openstack"]["network"]["source_url"])
 cluster_role = node["openstack"]["xen"]["cluster_role"]
 
 sr_uuid = nil
-unless Chef::Config[:solo]
-    search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |xen_node|
-        
-        next if xen_node['ipaddress']==node['ipaddress']
+search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |xen_node|
+    
+    next if xen_node['ipaddress']==node['ipaddress']
 
-        sr_uuid = (xen_node["xenserver"].nil? ? nil : xen_node["xenserver"]["storage"]["nfs"]["uuid"])
-        if !sr_uuid.nil?
-            Chef::Log.info("Found shared SR with uuid '#{sr_uuid}'.")
-            break
-        end
+    sr_uuid = (xen_node["xenserver"].nil? ? nil : xen_node["xenserver"]["storage"]["nfs"]["uuid"])
+    if !sr_uuid.nil?
+        Chef::Log.info("Found shared SR with uuid '#{sr_uuid}'.")
+        break
     end
 end
 

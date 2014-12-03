@@ -61,6 +61,7 @@ end
 
 profiles = node['haproxy']['profiles']
 server_pools = node['haproxy']['server_pools']
+backend_default_ip = node['haproxy']['backend_default_ip']
 
 server_pools.each do |name, config|
 
@@ -91,7 +92,7 @@ server_pools.each do |name, config|
         bind_port = config['bind_port'] || port
         bind_ssl = config['bind_ssl']
 
-        params[0] = "bind #{bind_address}:#{bind_port} " + bind_options.join(' ') +
+        bind_name = "#{name} #{bind_address}:#{bind_port} " + bind_options.join(' ') +
             (bind_ssl.nil? ? '' : "ssl crt #{cert_path}/#{bind_ssl}.pem")
 
         profile.each do |k, v|
@@ -118,7 +119,9 @@ server_pools.each do |name, config|
         pool_members = search(:node, pool_query)
 
         if pool_members.nil? || pool_members.size==0
-            pool_members = [ { :ipaddress => node['haproxy']['backend_default_ip'], :hostname => 'default' } ]
+
+            pool_members = backend_default_ip.nil? ? [ ]
+                : [ { :ipaddress => backend_default_ip, :hostname => 'default' } ]
         else
             pool_members.map! do |member|
 
@@ -156,7 +159,7 @@ server_pools.each do |name, config|
 
         Chef::Log.info("Adding server pool '#{name}': #{params}")
 
-        haproxy_lb name do
+        haproxy_lb bind_name do
             type 'listen'
             params params
         end
@@ -173,11 +176,6 @@ template = resources(template: "#{node['haproxy']['conf_dir']}/haproxy.cfg")
 template.cookbook('openstack-services')
 template.source('haproxy.cfg.erb')
 
-# Set-up virtual IP DNS name mapping
-dns_entry node['openstack']['openstack_ha_proxy'] do
-    address node['haproxy']['virtual_ip']
-end
-
 if node['haproxy']['is_clustered']
 
     include_recipe 'sysutils::cluster'
@@ -189,7 +187,7 @@ if node['haproxy']['is_clustered']
 
         ruby_block "configure common crm properties" do
             block do
-                shell!("crm configure property stonith-enabled=\"false\"")
+                sleep 20
                 shell!("crm configure property expected-quorum-votes=\"2\"")
                 shell!("crm configure property no-quorum-policy=\"ignore\"")
                 shell!("crm configure rsc_defaults resource-stickiness=\"100\"")
@@ -197,9 +195,20 @@ if node['haproxy']['is_clustered']
                 shell!("crm configure property pe-input-series-max=\"1000\"")
                 shell!("crm configure property pe-error-series-max=\"1000\"")
                 shell!("crm configure property cluster-recheck-interval=\"5min\"")
+                shell!("crm configure property stonith-enabled=\"false\"")
             end
             action :nothing
             subscribes :run, "script[restart cluster node services]", :immediately
+        end
+
+        ## Set-up virtual IP DNS name mapping and cluster resource to manage the VIP
+
+        openstack_ha_proxy = node['openstack']['openstack_ha_proxy']
+        virtual_ip_address = node['haproxy']['virtual_ip_address']
+
+        dns_entry openstack_ha_proxy do
+            address virtual_ip_address
+            not_if { virtual_ip_address.nil? }
         end
 
         template "/etc/corosync/crm_configure_ipaddr2.sh" do
@@ -215,5 +224,13 @@ if node['haproxy']['is_clustered']
             end
             action :nothing
         end
+    end
+else
+    fqdn = node['fqdn']
+    openstack_ha_proxy = node['openstack']['openstack_ha_proxy']
+
+    dns_entry fqdn do
+        name_alias openstack_ha_proxy
+        only_if { fqdn!=openstack_ha_proxy }
     end
 end

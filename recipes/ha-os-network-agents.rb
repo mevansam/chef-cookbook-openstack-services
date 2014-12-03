@@ -58,13 +58,13 @@ if is_clustered
     if do_init_cluster
         ruby_block "configure common crm properties" do
             block do
-                sleep 30
-                shell!("crm configure property stonith-enabled=\"false\"")
+                sleep 20
                 shell!("crm configure property no-quorum-policy=\"ignore\"")
                 shell!("crm configure property pe-warn-series-max=\"1000\"")
                 shell!("crm configure property pe-input-series-max=\"1000\"")
                 shell!("crm configure property pe-error-series-max=\"1000\"")
                 shell!("crm configure property cluster-recheck-interval=\"5min\"")
+                shell!("crm configure property stonith-enabled=\"false\"")
             end
             action :nothing
             subscribes :run, "script[restart cluster node services]", :immediately

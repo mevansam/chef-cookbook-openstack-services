@@ -86,18 +86,16 @@ databases_installed = Hash.new
 cluster_role = node["percona"]["cluster_role"]
 cluster_ips = []
 
-unless Chef::Config[:solo]
-    search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |percona_node|
-        
-        Chef::Log.info("Found cluster node '#{percona_node.name}' for role '#{cluster_role}'.")
+search(:node, "role:#{cluster_role} AND chef_environment:#{node.chef_environment}").each do |percona_node|
 
-        databases = percona_node["percona"]["openstack"]["databases"] if !percona_node["percona"]["openstack"].nil?
-        databases_installed.merge!(databases) if !databases.nil?
+    Chef::Log.info("Found cluster node '#{percona_node.name}' for role '#{cluster_role}'.")
 
-        next if percona_node["ipaddress"]==node["ipaddress"]
-        Chef::Log.info "Found Percona XtraDB cluster peer: #{percona_node['ipaddress']}"
-        cluster_ips << percona_node['private_ipaddress']
-    end
+    databases = percona_node["percona"]["openstack"]["databases"] if !percona_node["percona"]["openstack"].nil?
+    databases_installed.merge!(databases) if !databases.nil?
+
+    next if percona_node["ipaddress"]==node["ipaddress"]
+    Chef::Log.info "Found Percona XtraDB cluster peer: #{percona_node['ipaddress']}"
+    cluster_ips << percona_node["ipaddress"]
 end
 
 node.set["percona"]["openstack"]["databases"] = databases_installed
@@ -178,5 +176,29 @@ node["percona"]["openstack"]["services"].each do |service|
             EOH
             notifies :create, resources(:ruby_block => "flag database for service '#{service}' was installed successfully"), :immediately
         end
+    end
+end
+
+## Add haproxy user for haproxy mysql health check
+
+haproxy_cluster_role = node["percona"]["haproxy_cluster_role"]
+unless haproxy_cluster_role.nil?
+
+    haproxy_user_insert = "USE mysql; DELETE FROM user WHERE User='haproxy';"
+    search(:node, "role:#{haproxy_cluster_role} AND chef_environment:#{node.chef_environment}").each do |haproxy_node|
+
+        Chef::Log.info("Found haproxy cluster node '#{haproxy_node.name}' for role '#{haproxy_cluster_role}'.")
+        haproxy_user_insert += " INSERT INTO user (Host, User) values ('#{haproxy_node["ipaddress"]}', 'haproxy');"
+    end
+    haproxy_user_insert += " FLUSH PRIVILEGES;"
+
+    script "Create haproxy user" do
+        interpreter "bash"
+        user "root"
+        cwd "/tmp"
+        code <<-EOH
+            mysql -e "#{haproxy_user_insert}"
+            [ $? -eq 0 ] || exit $?
+        EOH
     end
 end

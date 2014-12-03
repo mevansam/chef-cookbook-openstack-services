@@ -2,6 +2,7 @@
 
 ## Additional Percona / MySql options
 default["percona"]["cluster_role"] = "os-ha-database"
+default["percona"]["haproxy_cluster_role"] = "os-ha-proxy"
 
 default["percona"]["mysql"]["ssl"] = false
 default["percona"]["mysql"]["config_path"] = "/etc/mysql"
