@@ -24,7 +24,7 @@ end
 
 ['quantum', 'neutron'].include?(node['openstack']['compute']['network']['service_type']) || return
 
-is_clustered = node['openstack']['network']['l3']['clustered']
+is_clustered = node['openstack']['network']['l3']['is_clustered']
 if is_clustered 
 
     # Disable agents services that will be managed by the cluster manager
@@ -43,7 +43,9 @@ if is_clustered
     do_init_cluster = !node["cluster_initializing_node"].nil? && node["cluster_initializing_node"]
     Chef::Log.info("Cluster initializing node: #{node["hostname"]}/#{do_init_cluster}")
 
-    directory "/usr/lib/ocf/resource.d/openstack"
+    directory "/usr/lib/ocf/resource.d/openstack" do
+        recursive true
+    end
     cookbook_file "neutron-dhcp-agent" do
         path "/usr/lib/ocf/resource.d/openstack/neutron-dhcp-agent"
         mode 00744

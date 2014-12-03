@@ -62,8 +62,10 @@ override["openstack"]["secret"]["db_passwords_data_bag"] = "os_db_passwords-#{no
 override["openstack"]["secret"]["service_passwords_data_bag"] = "os_service_passwords-#{node.chef_environment}"
 override["openstack"]["secret"]["secrets_data_bag"] = "os_secrets-#{node.chef_environment}"
 
-## OpenStack service cluster roles
+## OpenStack service clustering
 default["openstack"]["controller"]["cluster_role"] = "os-ha-controller"
+
+default['openstack']['network']['l3']['is_clustered'] = false
 
 ## Xen Specific Attributes
 
