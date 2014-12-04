@@ -27,6 +27,9 @@ default["upstart"]["services"] = [
     "neutron-plugin-linuxbridge-agent",
     "neutron-plugin-openvswitch-agent",
     "neutron-openvswitch-switch",
+    "neutron-dhcp-agent",
+    "neutron-metadata-agent",
+    "neutron-l3-agent",
     "openvswitch-switch",
     "iscsitarget"
 ]
