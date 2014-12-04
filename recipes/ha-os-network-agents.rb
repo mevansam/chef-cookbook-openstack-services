@@ -72,6 +72,36 @@ if is_clustered
             subscribes :run, "script[restart cluster node services]", :immediately
         end
     end
+else
+    script "Stopping pacemaker services if configured" do
+        interpreter "bash"
+        user "root"
+        cwd "/tmp"
+        code <<-EOH
+            if [ -e "$(which crm)" ]; then
+                for res in $(crm resource list | awk '/Started/ { print $1 }'); do
+                    crm resource stop $res
+                done
+                while [ -n "$(crm resource list | grep Started)" [; do
+                    echo "Waiting for pacemaker services to stop..."
+                    sleep 1
+                done
+                for res in $(crm resource list | awk '/Started/ { print $1 }'); do
+                    crm resource cleanup $res
+                done
+            fi
+        EOH
+    end
+
+    # Enable disabled agent services
+    if platform_family?('debian')
+        [ "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent" ].each do |service|
+
+            file "/etc/init/#{service}.override" do
+                action :delete
+            end
+        end
+    end
 end
 
 include_recipe 'openstack-common::openrc'
@@ -168,6 +198,15 @@ template '/etc/neutron/l3_agent.ini' do
 end
 
 ## Start services
+script "Cleaning log files" do
+    interpreter "bash"
+    user "root"
+    cwd "/tmp"
+    code <<-EOH
+        for f in $(ls /var/log/neutron/*.log); do cat /dev/null > $f; done
+    EOH
+    subscribes :run, 'template[/etc/neutron/neutron.conf]'
+end
 
 if is_clustered
 
