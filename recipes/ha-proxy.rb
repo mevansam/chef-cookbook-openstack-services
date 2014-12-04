@@ -92,8 +92,14 @@ server_pools.each do |name, config|
         bind_port = config['bind_port'] || port
         bind_ssl = config['bind_ssl']
 
-        bind_name = "#{name} #{bind_address}:#{bind_port} " + bind_options.join(' ') +
-            (bind_ssl.nil? ? '' : "ssl crt #{cert_path}/#{bind_ssl}.pem")
+        if bind_ssl.nil?
+            bind_name = "#{name} #{bind_address}:#{bind_port} " + bind_options.join(' ')
+        else
+            bind_name = name
+
+            options = bind_options + [ "ssl crt #{cert_path}/#{bind_ssl}.pem" ]
+            params[0] = "bind #{bind_address}:#{bind_port} " + options.join(' ')
+        end
 
         profile.each do |k, v|
 
