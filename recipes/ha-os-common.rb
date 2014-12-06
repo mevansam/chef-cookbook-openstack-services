@@ -22,6 +22,12 @@ class ::Chef::Recipe # rubocop:disable Documentation
     include ::SysUtils::Helper
 end
 
+# To fix issue where iscsi_ip_address picks the wrong IP of the ohai ipaddress has been overridden
+node.override['openstack']['block-storage']['volume']['iscsi_ip_address'] = node['ipaddress'] \
+	if node.recipes.include?('openstack-block-storage::volume') ||
+		node.recipes.include?('openstack-block-storage::scheduler') ||
+		node.recipes.include?('openstack-block-storage::api') ||
+
 if node.run_list.expand(node.chef_environment).recipes.include?("openstack-compute::compute") &&
 	node["openstack"]["compute"]["driver"]=="xenapi.XenAPIDriver"
 
