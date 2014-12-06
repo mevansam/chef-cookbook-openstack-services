@@ -32,6 +32,7 @@ end
 
 if !nova_initialized
 	include_recipe "openstack-compute::nova-setup" 
+	include_recipe "openstack-compute::identity_registration" 
 	nova_initialized = true
 end
 
