@@ -214,7 +214,7 @@ if node['haproxy']['is_clustered']
 
         dns_entry openstack_ha_proxy do
             address virtual_ip_address
-            not_if { virtual_ip_address.nil? }
+            not_if { virtual_ip_address.nil? || openstack_ha_proxy==virtual_ip_address }
         end
 
         template "/etc/corosync/crm_configure_ipaddr2.sh" do
