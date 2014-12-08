@@ -268,8 +268,8 @@ neutron_dhcp_agent_start() {
 
     sudo service neutron-plugin-openvswitch-agent restart
     su ${OCF_RESKEY_user} -s /bin/sh -c "${OCF_RESKEY_binary} --config-file=$OCF_RESKEY_config \
-       --config-file=$OCF_RESKEY_plugin_config --log-file=/var/log/neutron/dhcp-agent.log $OCF_RESKEY_additional_parameters"' >> \
-	/dev/null 2>&1 & echo $!' > $OCF_RESKEY_pid
+       --config-file=$OCF_RESKEY_plugin_config --log-file=/var/log/neutron/dhcp-agent.log $OCF_RESKEY_additional_parameters"' > \
+	   /var/log/neutron/dhcp-agent-start.log 2>&1 & echo $!' > $OCF_RESKEY_pid
 
     # Spin waiting for the server to come up.
     # Let the CRM/LRM time us out if required

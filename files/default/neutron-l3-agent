@@ -259,8 +259,8 @@ neutron_metadata_agent_start() {
     # Don't use ocf_run as we're sending the tool's output
     # straight to /dev/null anyway and using ocf_run would break stdout-redirection here.
     su ${OCF_RESKEY_user} -s /bin/sh -c "${OCF_RESKEY_metadata_agent_binary} --config-file=$OCF_RESKEY_config \
-        --config-file=$OCF_RESKEY_metadata_agent_config --log-file=/var/log/neutron/metadata.log $OCF_RESKEY_additional_parameters"' >> \
-    /dev/null 2>&1 & echo $!' > $OCF_RESKEY_metadata_pid
+        --config-file=$OCF_RESKEY_metadata_agent_config --log-file=/var/log/neutron/metadata.log $OCF_RESKEY_additional_parameters"' > \
+        /var/log/neutron/metadata-start.log 2>&1 & echo $!' > $OCF_RESKEY_metadata_pid
 
     # Spin waiting for the server to come up.
     # Let the CRM/LRM time us out if required
@@ -528,8 +528,8 @@ neutron_l3_agent_start() {
        --config-file=$OCF_RESKEY_config \
        --config-file=$OCF_RESKEY_plugin_config \
        --log-file=/var/log/neutron/l3-agent.log \
-       $OCF_RESKEY_additional_parameters"' >> \
-	/dev/null 2>&1 & echo $!' > $OCF_RESKEY_pid
+       $OCF_RESKEY_additional_parameters"' > \
+       /var/log/neutron/l3-agent-start.log 2>&1 & echo $!' > $OCF_RESKEY_pid
 
     # Spin waiting for the server to come up.
     # Let the CRM/LRM time us out if required
