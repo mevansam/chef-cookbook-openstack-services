@@ -18,25 +18,40 @@
 # limitations under the License.
 #
 
-############################################################################
-# Work around for bug https://bugs.launchpad.net/openstack-chef/+bug/1313646
-# This code should be removed when chef client 11.14 is available
-if node["platform"]=='ubuntu' && node["platform_version"].to_f>=14.04
+if node["container_service"].nil?
 
-    node["upstart"]["services"].each do |monkey_patch|
+    # Work around for bug https://bugs.launchpad.net/openstack-chef/+bug/1313646
+    # This code should be removed when chef client 11.14 is available
+    if node["platform"]=='ubuntu' && node["platform_version"].to_f>=14.04
 
-        begin
-            svc = resources(service: monkey_patch)
-            svc.provider(::Chef::Provider::Service::Upstart)
+        node["upstart"]["services"].each do |monkey_patch|
 
-            Chef::Log.info( "Monkey patching openstack service resource '#{monkey_patch}'" +
-                "to use '::Chef::Provider::Service::Upstart' provider")
+            begin
+                svc = resources(service: monkey_patch)
+                svc.provider(::Chef::Provider::Service::Upstart)
 
-        rescue Exception => msg
+                Chef::Log.info( "Monkey patching openstack service resource '#{monkey_patch}'" +
+                    "to use '::Chef::Provider::Service::Upstart' provider")
 
-            Chef::Log.info( "Skipping monkey patching openstack service resource '#{monkey_patch}' " +
-                "as it has not been defined by recipes in this nodes run-list.")
+            rescue Exception => msg
+
+                Chef::Log.info( "Skipping monkey patching openstack service resource '#{monkey_patch}' " +
+                    "as it has not been defined by recipes in this nodes run-list.")
+            end
         end
     end
+else
+
+    # Force runit provider for container services. This needs to
+    # be done as the chef-init override does not seem to affect
+    # service for which the provider has been set explicitly
+
+    is_building = node.name.end_with?('-build')
+
+    node["container_service"].each_key do |service|
+
+        svc = resources(service: service)
+        svc.provider(::Chef::Provider::ContainerService::Runit)
+        svc.ignore_failure(true) if is_building
+    end
 end
-############################################################################

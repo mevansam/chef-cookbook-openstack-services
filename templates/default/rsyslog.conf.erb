@@ -1,0 +1,6 @@
+# prevent debug from dnsmasq with the daemon.none parameter
+*.*;auth,authpriv.none,daemon.none,local0.none -/var/log/syslog
+
+# logs to send to remote log aggregater
+local0.* <%= @protocol=="tcp" ? '@@' : '@' %><%= @log_server %>
+local1.* <%= @protocol=="tcp" ? '@@' : '@' %><%= @log_server %>

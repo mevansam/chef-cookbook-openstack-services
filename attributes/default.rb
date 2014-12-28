@@ -21,6 +21,10 @@ default["openstack"]["dashboard"]["certificate_databag_item"] = nil
 ## OpenStack proxy (services loadbalancer)
 default["openstack"]["openstack_ha_proxy"] = nil
 
+## OpenStack rsyslog host
+default["openstack"]["endpoints"]["rsyslog"]["host"] = nil
+default["openstack"]["endpoints"]["rsyslog"]["protocol"] = "udp"
+
 default["haproxy"]["log"] = [ {
     "address" => "127.0.0.1",
     "length" => 1024,

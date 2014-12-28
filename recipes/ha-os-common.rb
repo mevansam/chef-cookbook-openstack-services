@@ -22,6 +22,95 @@ class ::Chef::Recipe # rubocop:disable Documentation
     include ::SysUtils::Helper
 end
 
+# Enable all services that will be managed by Runit and created
+# by recipes in the current run-list. This fixes  a bug where
+# the restart does not check if service is ready.
+#
+# see https://github.com/opscode/chef-init/blob/release/0.3.2/lib/chef/provider/container_service/runit.rb
+#
+is_container = !node['container_service'].nil?
+is_container_build = is_container && node.name.end_with?('-build')
+
+if is_container
+
+	if is_container_build
+
+		node["container_service"].each_key do |service|
+
+			service "enabling runit #{service}" do
+				provider Chef::Provider::ContainerService::Runit
+				service_name service
+				action :enable
+			end
+		end
+
+		ruby_block "waiting for runit services to be enabled" do
+			block do
+
+				node["container_service"].each_key do |service|
+
+					service = "/opt/chef/service/#{service}"
+
+					Chef::Log.info("waiting until named pipe #{service}/supervise/ok exists.")
+					until ::FileTest.pipe?("#{service}/supervise/ok")
+						sleep 1
+					end
+
+					Chef::Log.info("waiting until named pipe #{service}/log/supervise/ok exists.")
+					until ::FileTest.pipe?("#{service}/log/supervise/ok")
+						sleep 1
+					end
+				end
+			end
+		end
+	else
+		node["container_service"].each_key do |service|
+
+			service "starting runit #{service}" do
+				provider Chef::Provider::ContainerService::Runit
+				service_name service
+				action :start
+			end
+		end
+	end
+end
+
+if node["openstack"]["endpoints"]["rsyslog"]["host"]
+
+	if is_container_build
+
+		service "rsyslog" do
+			action :start
+		end
+
+	elsif node["openstack"]["endpoints"]["rsyslog"]["host"]
+
+		service "rsyslog" do
+			action :enable
+		end
+
+		template "/etc/rsyslog.d/99-openstack.conf" do
+			source "rsyslog.conf.erb"
+			mode "0644"
+			variables(
+				:protocol => node["openstack"]["endpoints"]["rsyslog"]["protocol"],
+				:log_server => node["openstack"]["endpoints"]["rsyslog"]["host"]
+			)
+			notifies :restart, 'service[rsyslog]', :immediately
+		end
+	end
+
+	node.override['openstack']['identity']['syslog']['use'] = true
+	node.override['openstack']['telemetry']['syslog']['use'] = true
+	node.override['openstack']['image']['syslog']['use'] = true
+	node.override['openstack']['block-storage']['syslog']['use'] = true
+	node.override['openstack']['compute']['syslog']['use'] = true
+	node.override['openstack']['network']['syslog']['use'] = true
+	node.override['openstack']['heat']['syslog']['use'] = true
+	node.override['openstack']['database']['syslog']['use'] = true
+	node.override['openstack']['orchestration']['syslog']['use'] = true
+end
+
 # To fix issue where iscsi_ip_address picks the wrong IP of the ohai ipaddress has been overridden
 node.override['openstack']['block-storage']['volume']['iscsi_ip_address'] = node['ipaddress'] \
 	if node.recipes.include?('openstack-block-storage::volume') ||
