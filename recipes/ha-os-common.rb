@@ -47,18 +47,29 @@ if is_container
 		ruby_block "waiting for runit services to be enabled" do
 			block do
 
-				node["container_service"].each_key do |service|
+				node["container_service"].each do |service, commands|
 
-					service = "/opt/chef/service/#{service}"
+					service_path = "/opt/chef/service/#{service}"
 
-					Chef::Log.info("waiting until named pipe #{service}/supervise/ok exists.")
-					until ::FileTest.pipe?("#{service}/supervise/ok")
+					until ::FileTest.pipe?("#{service_path}/supervise/ok")
+						sleep 1
+					end
+					until ::FileTest.pipe?("#{service_path}/log/supervise/ok")
 						sleep 1
 					end
 
-					Chef::Log.info("waiting until named pipe #{service}/log/supervise/ok exists.")
-					until ::FileTest.pipe?("#{service}/log/supervise/ok")
-						sleep 1
+					finish = commands["finish"]
+					unless finish.nil?
+
+						finish_script_file = "#{service_path}/finish"
+						Chef::Log.info("Creating finish script #{finish_script_file}.")
+
+						finish_script_script = "#!/bin/sh\n" +
+							"exec 2>&1\n" +
+							"exec #{finish} 2>&1\n"
+
+						::File.open(finish_script_file, 'w+') { |f| f.write(finish_script_script) }
+						::File.chmod(0744, finish_script_file)
 					end
 				end
 			end
