@@ -67,7 +67,6 @@ server_pools.each do |name, config|
 
     unless config['cluster_role'].nil?
 
-
         if config['port']
             port = config['port']
         else
