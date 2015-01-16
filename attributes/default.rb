@@ -19,7 +19,12 @@ default["percona"]["mysql"]["certificate_databag_item"] = nil
 default["openstack"]["dashboard"]["certificate_databag_item"] = nil
 
 ## OpenStack proxy (services loadbalancer)
-default["openstack"]["openstack_ha_proxy"] = nil
+
+# OpenStack app services
+default["openstack"]["openstack_app_proxy"] = nil
+
+# Openstack ops services
+default["openstack"]["openstack_ops_proxy"] = nil
 
 ## OpenStack rsyslog host
 default["openstack"]["endpoints"]["rsyslog"]["host"] = nil

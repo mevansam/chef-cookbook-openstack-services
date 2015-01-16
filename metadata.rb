@@ -7,6 +7,7 @@ long_description 'Installs/Configures recipes that use stackforge and related co
 version          '0.1.0'
 
 depends          'sysutils', '= 1.0.0'
+depends          'cluster',  '= 1.0.0'
 depends          'storage',  '= 0.1.0'
 depends          'network',  '= 0.1.0'
 depends          'compute',  '= 0.1.0'

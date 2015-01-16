@@ -122,6 +122,9 @@ if node["openstack"]["endpoints"]["rsyslog"]["host"]
 	node.override['openstack']['orchestration']['syslog']['use'] = true
 end
 
+# To fix issue where vncserver_proxyclient_address is dedaulting to 0.0.0.0 and not the host's ip
+node.override['openstack']['endpoints']['compute-vnc-bind']['host'] = node['ipaddress']
+
 # To fix issue where iscsi_ip_address picks the wrong IP of the ohai ipaddress has been overridden
 node.override['openstack']['block-storage']['volume']['iscsi_ip_address'] = node['ipaddress'] \
 	if node.recipes.include?('openstack-block-storage::volume') ||

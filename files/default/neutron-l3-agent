@@ -335,6 +335,26 @@ neutron_metadata_agent_stop() {
 #######################################################################
 # Functions invoked by resource manager actions for l3 agent
 
+neutron_remove_dead_cluster_agents() {
+
+    local host
+    local net_id
+    local qg
+
+    . /root/openrc
+
+    online=$(crm status | grep Online | sed -e "s/Online: \[ //" | sed -e "s/\ ]//")
+    offline=$(crm status | grep OFFLINE | sed -e "s/OFFLINE: \[ //" | sed -e "s/\ ]//")
+
+    ocf_log info "Ensuring all L3 and Metadata agents registered with this cluster are deleted"
+    for i in $online $offline; do
+        for j in $(neutron --insecure agent-list | grep "$i" | awk '/L3 agent|Metadata agent/ { print $2 }'); do
+            ocf_log info "  - Deleting agent $j"
+            neutron --insecure agent-delete $j
+        done
+    done
+}
+
 neutron_l3_agent_cleanup_ovs_router_ports() {
     local host
     local net_id
@@ -500,6 +520,8 @@ neutron_l3_agent_monitor() {
 
 neutron_l3_agent_start() {
     local rc
+
+    neutron_remove_dead_cluster_agents
 
     # Start the metadata agent first
     neutron_metadata_agent_start

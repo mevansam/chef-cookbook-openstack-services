@@ -38,7 +38,7 @@ if is_clustered
         end
     end
 
-    include_recipe 'sysutils::cluster'
+    include_recipe 'cluster::pacemaker'
     
     do_init_cluster = !node["cluster_initializing_node"].nil? && node["cluster_initializing_node"]
     Chef::Log.info("Cluster initializing node: #{node["hostname"]}/#{do_init_cluster}")

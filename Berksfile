@@ -1,7 +1,5 @@
 source "https://api.berkshelf.com"
 
-metadata
-
 cookbook 'apt',             '2.4.0'
 cookbook 'yum',             '3.2.2'
 cookbook 'sudo',            '2.6.0'
@@ -11,6 +9,10 @@ cookbook 'selinux',         '0.8.0'
 cookbook 'xfs',             '1.1.0'
 cookbook 'hostsfile',       '~> 2.4.5'
 cookbook 'haproxy',         '~> 1.6.6'
+cookbook 'java',            '~> 1.29.0'
+cookbook 'logstash',        '~> 0.11.2'
+cookbook 'kibana_lwrp',     '~> 2.0.0'
+cookbook 'elasticsearch',   '~> 0.3.13'
 
 cookbook 'percona',  git: 'https://github.com/mevansam/chef-percona'
 cookbook 'rabbitmq', git: 'https://github.com/kennonkwok/rabbitmq.git'
@@ -31,6 +33,7 @@ cookbook 'openstack-network',        git: 'https://github.com/mevansam/chef-cook
 cookbook 'openstack-dashboard',      git: 'https://github.com/mevansam/chef-cookbook-openstack-dashboard',     branch: 'stable/icehouse'
 
 cookbook 'sysutils', git: 'https://github.com/mevansam/chef-cookbook-sysutils.git'
+cookbook 'cluster', git: 'https://github.com/mevansam/chef-cookbook-cluster.git'
 cookbook 'compute',  git: 'https://github.com/mevansam/chef-cookbook-compute.git'
 cookbook 'network',  git: 'https://github.com/mevansam/chef-cookbook-network.git'
 cookbook 'storage',  git: 'https://github.com/mevansam/chef-cookbook-storage.git'
