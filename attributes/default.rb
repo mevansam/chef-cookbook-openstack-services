@@ -1,5 +1,30 @@
 ## OpenStack HA services attributes
 
+## ELK Logging setup
+
+# List of named syslog sinks
+#  
+# i.e. 
+# { 
+#   "haproxy" => { 
+#     "protocol" => "tcp",
+#     "bind_address" => "0.0.0.0"
+#     "port" => 51400 }
+# }
+#
+default["elk"]["logstash"]["syslog"]["ports"] = { }
+
+default["elk"]["logstash"]["syslog"]["bind_address"] = "0.0.0.0"
+default["elk"]["logstash"]["syslog"]["port"] = 514
+
+default["elk"]["logio"]["http_port"] = 9081
+
+default["elk"]["logio"]["server_address"] = "127.0.0.1"
+default["elk"]["logio"]["server_port"] = 28777
+
+default["nvm"]["nvm_version"] = "0.22.2"
+default["nvm"]["nodejs_version"] = "0.10.35"
+
 ## Additional Percona / MySql options
 default["percona"]["cluster_role"] = "os-ha-database"
 default["percona"]["haproxy_cluster_role"] = "os-ha-proxy"

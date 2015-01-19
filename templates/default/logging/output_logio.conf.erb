@@ -1,0 +1,13 @@
+output {
+  tcp {
+    codec => logio {
+      debug_output => "false"
+    }
+<% if @output_logio_host!="0.0.0.0" %>
+    host => "<%= @output_logio_host %>"
+<% else %>
+    host => "127.0.0.1"
+<% end -%>
+    port => <%= @output_logio_port %>
+  }
+}

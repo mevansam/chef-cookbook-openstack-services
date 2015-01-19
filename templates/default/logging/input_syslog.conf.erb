@@ -1,0 +1,41 @@
+input {
+  tcp {
+    port => <%= @input_syslog_port %>
+    host => "<%= @input_syslog_host %>"
+    type => "syslog"
+  }
+}
+
+filter {
+  if [type] == "haproxy" {
+    grok {
+      match => [
+        "message", "%{HAPROXYHTTP}",
+        "message", "%{HAPROXYTCP}"
+      ]
+    }
+    mutate {
+      convert => [ "time_backend_connect", "integer" ]
+      convert => [ "time_duration", "integer" ]
+      convert => [ "time_queue", "integer" ]
+    }
+  } else if [message] =~ /INFO access \[-\]/ {
+    grok {
+      match => { "message" => "<%{POSINT:syslog_pri}>%{SYSLOGTIMESTAMP:syslog_timestamp} %{SYSLOGHOST:syslog_hostname} %{TIMESTAMP_ISO8601:log_timestamp} %{POSINT:syslog_pid} %{AUDITLOGLEVEL:log_level} access .* %{HOSTNAME:http_client_host} .* \[%{HTTPDATE:http_timestamp}\] \"%{WORD:http_method} %{HTTP_HOST:http_host}%{URIPATH:http_path}(?:%{URIPARAM:http_params})? %{HTTP_VER:http_ver}\" %{POSINT:http_response_code} %{POSINT:http_response_size}" }
+      add_tag => http_access
+    }
+  } else {
+    grok {
+      match => { "message" => "<%{POSINT:syslog_pri}>%{SYSLOGTIMESTAMP:syslog_timestamp} %{SYSLOGHOST:syslog_hostname} %{DATA:syslog_program}((:\[%{POSINT:syslog_pid}\])?:?)? %{GREEDYDATA:syslog_message}" }
+    }
+  }
+  syslog_pri {
+  }
+  date {
+    match => [ "syslog_timestamp", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
+  }
+  mutate {
+    tags => [ "http_access" ]
+    convert => [ "http_response_size", "integer" ]
+  }
+}

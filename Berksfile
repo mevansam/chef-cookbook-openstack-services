@@ -29,7 +29,7 @@ cookbook 'openstack-telemetry',      git: 'https://github.com/stackforge/cookboo
 cookbook 'openstack-image',          git: 'https://github.com/mevansam/chef-cookbook-openstack-image.git',     branch: 'stable/icehouse'
 cookbook 'openstack-block-storage',  git: 'https://github.com/mevansam/chef-cookbook-openstack-block-storage', branch: 'stable/icehouse'
 cookbook 'openstack-compute',        git: 'https://github.com/mevansam/chef-cookbook-openstack-compute.git',   branch: 'stable/icehouse'
-cookbook 'openstack-network',        git: 'https://github.com/mevansam/chef-cookbook-openstack-network.git'    branch: 'stable/icehouse'
+cookbook 'openstack-network',        git: 'https://github.com/mevansam/chef-cookbook-openstack-network.git',   branch: 'stable/icehouse'
 cookbook 'openstack-dashboard',      git: 'https://github.com/mevansam/chef-cookbook-openstack-dashboard',     branch: 'stable/icehouse'
 
 cookbook 'sysutils', git: 'https://github.com/mevansam/chef-cookbook-sysutils.git'

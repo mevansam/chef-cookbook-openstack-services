@@ -1,0 +1,3 @@
+#!/bin/sh
+exec 2>&1
+exec ps -ef | awk '/\/bin\/log.io-server/ { print $2 }' | xargs kill -15 2>&1

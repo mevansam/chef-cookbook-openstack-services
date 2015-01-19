@@ -1,0 +1,7 @@
+output {
+  if [type] == "syslog" and "_grokparsefailure" in [tags] {
+    file { 
+      path => "<%= @input_logstash_log_path %>/failed_syslog_events-%{+YYYY-MM-dd}" 
+    }
+  }
+}

@@ -46,12 +46,12 @@ if is_clustered
     directory "/usr/lib/ocf/resource.d/openstack" do
         recursive true
     end
-    cookbook_file "neutron-dhcp-agent" do
+    cookbook_file "pacemaker/neutron-dhcp-agent" do
         path "/usr/lib/ocf/resource.d/openstack/neutron-dhcp-agent"
         mode 00744
         notifies :run, "ruby_block[start cluster DHCP agent service]", :delayed if do_init_cluster
     end
-    cookbook_file "neutron-l3-agent" do
+    cookbook_file "pacemaker/neutron-l3-agent" do
         path "/usr/lib/ocf/resource.d/openstack/neutron-l3-agent"
         mode 00744
         notifies :run, "ruby_block[start cluster L3 agent service]", :delayed if do_init_cluster
@@ -214,13 +214,13 @@ if is_clustered
     Chef::Application.fatal!("Unable to determine DNS host for l3 agent router external connectivity test.") if dns_servers.size==0
 
     template "/etc/corosync/crm_configure_dhcp_agent.sh" do
-        source 'crm_configure_dhcp_agent.sh.erb'
+        source 'pacemaker/crm_configure_dhcp_agent.sh.erb'
         mode 00744
         notifies :run, "ruby_block[start cluster DHCP agent service]", :delayed if do_init_cluster
     end
 
     template "/etc/corosync/crm_configure_l3_agent.sh" do
-        source 'crm_configure_l3_agent.sh.erb'
+        source 'pacemaker/crm_configure_l3_agent.sh.erb'
         mode 00744
         variables(
             dns_server: dns_servers[0]
