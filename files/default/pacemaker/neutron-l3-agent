@@ -422,9 +422,9 @@ neutron_l3_agent_validate_external_router() {
 
                     ocf_log err "Router qrouter-$i could not ping external DNS"
                     rc=$OCF_ERR_GENERIC
+                else
+                    ocf_log info "Router qrouter-$i successfully pinged external DNS"
                 fi
-
-                ocf_log info "Router qrouter-$i successfully pinged external DNS"
             fi
         done
         

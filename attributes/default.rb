@@ -51,41 +51,19 @@ default["openstack"]["openstack_app_proxy"] = nil
 # Openstack ops services
 default["openstack"]["openstack_ops_proxy"] = nil
 
-## OpenStack rsyslog host
-default["openstack"]["endpoints"]["rsyslog"]["host"] = nil
-default["openstack"]["endpoints"]["rsyslog"]["protocol"] = "udp"
+## OpenStack syslog host
+
+# Array of [ { 'host' => 'x.x.x.x', protocol => 'tcp' } ]
+#
+# protocol defaults to udp if not specified
+#
+default["openstack"]["logging"]["syslog_endpoints"] = nil
 
 default["haproxy"]["log"] = [ {
     "address" => "127.0.0.1",
     "length" => 1024,
     "facility" => "local0",
     "level" => "info" } ]
-
-default["haproxy"]["global_parameters"] = { }
-default["haproxy"]["global_options"] = [ ]
-
-default["haproxy"]["default_parameters"] = { }
-default["haproxy"]["default_options"] = [ ]
-
-default["haproxy"]["default_options"] = [ ]
-
-default["haproxy"]["profiles"] = { }
-default["haproxy"]["server_pools"] = { }
-
-# Databag items containing certificates which can be referenced
-# by the pools to create ssl terminated frontends
-default["haproxy"]["certificate_databag_items"] = { }
-
-# Default back-end IP if pool server cannot be found via
-# role search. This value can be overridden by providing
-# it within the server pool configuration.
-default["haproxy"]["backend_default_ip"] = nil
-
-# The Virtual IP that is shared across the HAProxy cluster
-default["haproxy"]["virtual_ip_address"] = nil
-default["haproxy"]["virtual_ip_cidr_netmask"] = nil
-default["haproxy"]["virtual_ip_nic"] = nil
-default["haproxy"]["is_clustered"] = false
 
 ## OpenStack cookbook overrides
 override['openstack']['secret']['key_path'] = "/etc/chef/encrypted_data_bag_secret"

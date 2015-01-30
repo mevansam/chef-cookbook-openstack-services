@@ -46,12 +46,14 @@ if is_clustered
     directory "/usr/lib/ocf/resource.d/openstack" do
         recursive true
     end
-    cookbook_file "pacemaker/neutron-dhcp-agent" do
+    cookbook_file "neutron-dhcp-agent" do
+        source "pacemaker/neutron-dhcp-agent"
         path "/usr/lib/ocf/resource.d/openstack/neutron-dhcp-agent"
         mode 00744
         notifies :run, "ruby_block[start cluster DHCP agent service]", :delayed if do_init_cluster
     end
-    cookbook_file "pacemaker/neutron-l3-agent" do
+    cookbook_file "neutron-l3-agent" do
+        source "pacemaker/neutron-l3-agent"
         path "/usr/lib/ocf/resource.d/openstack/neutron-l3-agent"
         mode 00744
         notifies :run, "ruby_block[start cluster L3 agent service]", :delayed if do_init_cluster

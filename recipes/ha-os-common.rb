@@ -86,7 +86,7 @@ if is_container
 	end
 end
 
-if node["openstack"]["endpoints"]["rsyslog"]["host"]
+if node["openstack"]["endpoints"]["rsyslog"]
 
 	if is_container_build
 
@@ -94,18 +94,27 @@ if node["openstack"]["endpoints"]["rsyslog"]["host"]
 			action :start
 		end
 
-	elsif node["openstack"]["endpoints"]["rsyslog"]["host"]
+	else
 
 		service "rsyslog" do
 			action :enable
 		end
 
+		Chef::Application.fatal!("You must provider the syslog servers as an array of {host => 'x.x.x.x' [, protocol => 'udp' ]}") \
+			unless node["openstack"]["logging"]["syslog_endpoints"].is_a?(Array)
+
+		syslog_servers = Array.new(node["openstack"]["logging"]["syslog_endpoints"])
+
+		# This ensures that syslog destination alternate based on current hosts ip's modulus
+		c = node['ipaddress'].split('.').last.to_i%syslog_servers.size
+		syslog_servers.rotate!(c)
+
 		template "/etc/rsyslog.d/99-openstack.conf" do
 			source "rsyslog.conf.erb"
 			mode "0644"
 			variables(
-				:protocol => node["openstack"]["endpoints"]["rsyslog"]["protocol"],
-				:log_server => node["openstack"]["endpoints"]["rsyslog"]["host"]
+				:primary_syslog_server => syslog_servers.shift,
+				:secondary_syslog_servers => syslog_servers.size>0 ? syslog_servers : nil
 			)
 			notifies :restart, 'service[rsyslog]', :immediately
 		end

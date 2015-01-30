@@ -4,6 +4,11 @@ input {
     host => "<%= @input_syslog_host %>"
     type => "syslog"
   }
+  udp {
+    port => <%= @input_syslog_port %>
+    host => "<%= @input_syslog_host %>"
+    type => "syslog"
+  }
 }
 
 filter {
