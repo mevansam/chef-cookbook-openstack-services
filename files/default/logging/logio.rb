@@ -186,7 +186,7 @@ class LogStash::Codecs::LogIO < LogStash::Codecs::Base
       #     debug myapp >> 09:45:15 AM UTC : ..... "message" => "app started",
       #                                        ^
       str = str.gsub(/  /,'..')
-      
+
       # This code ensures there is a space after the dots but before
       # the hash key of the event.
       #
@@ -194,29 +194,29 @@ class LogStash::Codecs::LogIO < LogStash::Codecs::Base
       #                                           ^
       str = str.gsub(/\.\.\."/,'.. "')
 
-      # These dots will be added to array elements because 
+      # These dots will be added to array elements because
       # .awesome_inspect does not properly indent arrays.
       #
       #     debug myapp >> 09:45:15 AM UTC : .... "tags" => [
       #     debug myapp >> 09:45:15 AM UTC : .................. [0] "example",
-      #                                                  ^      
+      #                                                  ^
       array_element_indent = "......................."
 
       # Ensures that there is a space between the dots and [ start of array elements
       #
       #     debug myapp >> 09:45:15 AM UTC : .................. [0] "example",
-      #                                                        ^      
+      #                                                        ^
       str = str.gsub(/\.\.\.\[/,array_element_indent + '.. [')
-      
+
       # Ensures that there is a space between the dots and ] end of arrays
       #
       #     debug myapp >> 09:45:15 AM UTC : ............... ]
-      #                                                     ^      
+      #                                                     ^
       str = str.gsub(/\.\.\.\]/,array_element_indent + '.. ]')
 
       # Split our multi-line string into an array
       arr = str.split(/\n/)
-      
+
       # --------------------------------------------------------------------
       # Note:
       #   awesome_inspect() right aligns keys to make => assignments line up.
@@ -228,19 +228,19 @@ class LogStash::Codecs::LogIO < LogStash::Codecs::Base
 
       # We'll base the padding on the index (location) of the '=' equal sign
       # in the 4th line of our array.  The fourth line is actually the first
-      # hash key (usually 'message') because of our div and blank lines that surround it.      
+      # hash key (usually 'message') because of our div and blank lines that surround it.
       pad_length_check_index = 4
       equal_sign_index = arr[pad_length_check_index].index('=')
 
       # This shouldn't happen, but just in case there is not an '=' sign
       # in our checked string we'll report an error.
       if equal_sign_index.nil?
-      
+
         ident_consistency_padding = ""
         @on_event.call("+log|debug|logio_codec|WARNING|Parse Error 001: The message did not contain an equal sign where expected.\r\n")
-              
+
       else
-      
+
         # We force the hash key length + padding to
         # be at least @debug_eq_left_length characters/bytes.
         consistency_padding_amount = @debug_eq_left_length - equal_sign_index
@@ -253,7 +253,7 @@ class LogStash::Codecs::LogIO < LogStash::Codecs::Base
           ident_consistency_padding = ""
           @on_event.call("+log|debug|logio_codec|WARNING|Parse Error 002: Long field name found, consider increasing codec param: debug_eq_left_length\r\n")
         end
-              
+
       end
 
       # Because log.io prepends messages with the node and stream names,
@@ -292,9 +292,9 @@ class LogStash::Codecs::LogIO < LogStash::Codecs::Base
 
     # Perform standard output
     # e.g. +log|debug|myapp|INFO|A log message\r\n
-    
+
     # Resolve a few strings
-    standard_field_stream = data.sprintf(@standard_stream_format).ljust(32, "\xC2\xA0")
+    standard_field_stream = data.sprintf(@standard_stream_format)[/([-+_0-9a-zA-Z\.]+)(\[\d+\])?/, 1].ljust(32, "\xC2\xA0")
     standard_field_node   = if data["syslog_hostname"].nil? then "--UNKNOWN--" else data.sprintf(@standard_node_format).upcase end
     standard_field_level  = data.sprintf(@standard_log_level_format)
 

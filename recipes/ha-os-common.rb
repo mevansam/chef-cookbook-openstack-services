@@ -86,7 +86,7 @@ if is_container
 	end
 end
 
-if node["openstack"]["endpoints"]["rsyslog"]
+if node['openstack']['logging']['use_syslog']
 
 	if is_container_build
 
@@ -96,27 +96,29 @@ if node["openstack"]["endpoints"]["rsyslog"]
 
 	else
 
-		service "rsyslog" do
-			action :enable
-		end
+		Chef::Log.info("Configuring remote syslog hosts: #{node["openstack"]["logging"]["syslog_endpoint"]}")
 
-		Chef::Application.fatal!("You must provider the syslog servers as an array of {host => 'x.x.x.x' [, protocol => 'udp' ]}") \
-			unless node["openstack"]["logging"]["syslog_endpoints"].is_a?(Array)
+		syslog_hosts = Array.new(node["openstack"]["logging"]["syslog_endpoint"]["hosts"])
+		if syslog_hosts.size > 0
 
-		syslog_servers = Array.new(node["openstack"]["logging"]["syslog_endpoints"])
+			service "rsyslog" do
+				action :enable
+			end
 
-		# This ensures that syslog destination alternate based on current hosts ip's modulus
-		c = node['ipaddress'].split('.').last.to_i%syslog_servers.size
-		syslog_servers.rotate!(c)
+			# This ensures that syslog destination alternate based on current hosts ip's modulus
+			c = node['ipaddress'].split('.').last.to_i%syslog_hosts.size
+			syslog_hosts.rotate!(c)
 
-		template "/etc/rsyslog.d/99-openstack.conf" do
-			source "rsyslog.conf.erb"
-			mode "0644"
-			variables(
-				:primary_syslog_server => syslog_servers.shift,
-				:secondary_syslog_servers => syslog_servers.size>0 ? syslog_servers : nil
-			)
-			notifies :restart, 'service[rsyslog]', :immediately
+			template "/etc/rsyslog.d/99-openstack.conf" do
+				source "rsyslog.conf.erb"
+				mode "0644"
+				variables(
+					:protocol => node["openstack"]["logging"]["syslog_endpoint"]["protocol"],
+					:primary_syslog_server => syslog_hosts.shift,
+					:secondary_syslog_hosts => syslog_hosts.size>0 ? syslog_hosts : nil
+				)
+				notifies :restart, 'service[rsyslog]', :immediately
+			end
 		end
 	end
 
@@ -134,11 +136,11 @@ end
 # To fix issue where vncserver_proxyclient_address is dedaulting to 0.0.0.0 and not the host's ip
 node.override['openstack']['endpoints']['compute-vnc-bind']['host'] = node['ipaddress']
 
-# To fix issue where iscsi_ip_address picks the wrong IP of the ohai ipaddress has been overridden
-node.override['openstack']['block-storage']['volume']['iscsi_ip_address'] = node['ipaddress'] \
-	if node.recipes.include?('openstack-block-storage::volume') ||
-		node.recipes.include?('openstack-block-storage::scheduler') ||
-		node.recipes.include?('openstack-block-storage::api') ||
+# To fix issue where iscsi_ip_address picks the wrong IP if the ohai ipaddress has been overridden
+# node.override['openstack']['block-storage']['volume']['iscsi_ip_address'] = node['ipaddress'] \
+# 	if node.recipes.include?('openstack-block-storage::volume') ||
+# 		node.recipes.include?('openstack-block-storage::scheduler') ||
+# 		node.recipes.include?('openstack-block-storage::api')
 
 if node.run_list.expand(node.chef_environment).recipes.include?("openstack-compute::compute") &&
 	node["openstack"]["compute"]["driver"]=="xenapi.XenAPIDriver"

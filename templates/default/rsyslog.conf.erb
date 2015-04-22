@@ -2,11 +2,11 @@
 *.*;auth,authpriv.none,daemon.none,local0.none -/var/log/syslog
 
 # logs to send to remote log aggregater
-*.* <%= @primary_syslog_server['protocol']=="tcp" ? '@@' : '@' %><%= @primary_syslog_server['host'] %>
+*.* <%= @protocol=="tcp" ? '@@' : '@' %><%= @primary_syslog_server %>
 <% unless @secondary_syslog_servers.nil? %>
 $ActionExecOnlyWhenPreviousIsSuspended on
 <% @secondary_syslog_servers.each do |log_server| %>
-&  <%= log_server['protocol']=="tcp" ? '@@' : '@' %><%= log_server['host'] %>
+&  <%= @protocol=="tcp" ? '@@' : '@' %><%= log_server %>
 <% end -%>
 &  /var/log/localbuffer
 $ActionExecOnlyWhenPreviousIsSuspended off

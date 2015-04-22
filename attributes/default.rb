@@ -53,11 +53,12 @@ default["openstack"]["openstack_ops_proxy"] = nil
 
 ## OpenStack syslog host
 
-# Array of [ { 'host' => 'x.x.x.x', protocol => 'tcp' } ]
+# Array of ips.
 #
 # protocol defaults to udp if not specified
 #
-default["openstack"]["logging"]["syslog_endpoints"] = nil
+default["openstack"]["logging"]["syslog_endpoint"]["hosts"] = [ ]
+default["openstack"]["logging"]["syslog_endpoint"]["protocol"] = "udp"
 
 default["haproxy"]["log"] = [ {
     "address" => "127.0.0.1",
