@@ -75,6 +75,9 @@ override["openstack"]["secret"]["db_passwords_data_bag"] = "os_db_passwords-#{no
 override["openstack"]["secret"]["service_passwords_data_bag"] = "os_service_passwords-#{node.chef_environment}"
 override["openstack"]["secret"]["secrets_data_bag"] = "os_secrets-#{node.chef_environment}"
 
+## Memcached server cluster to use for caching
+default["openstack"]["memcached"]["cluster_name"] = nil
+
 ## OpenStack service clustering
 default["openstack"]["controller"]["cluster_role"] = "os-ha-controller"
 
