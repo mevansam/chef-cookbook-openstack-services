@@ -31,7 +31,7 @@ unless cluster_name.nil?
 
         Chef::Log.info("Adding node '#{memcached_node.name}' as memcached node.")
 
-        memcached_port = memcached_node["memcached"]["port"] || "11211"
+        memcached_port = memcached_node["memcached"] ? memcached_node["memcached"]["port"] || "11211" : "11211"
         memcached_servers << "#{memcached_node["ipaddress"]}:#{memcached_port}"
     end
 
