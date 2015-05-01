@@ -34,6 +34,7 @@ unless cluster_name.nil?
         memcached_port = memcached_node["memcached"] ? memcached_node["memcached"]["port"] || "11211" : "11211"
         memcached_servers << "#{memcached_node["ipaddress"]}:#{memcached_port}"
     end
-
+    memcached_servers.sort!
+    
     node.override['openstack']["memcached_servers"] = memcached_servers
 end
