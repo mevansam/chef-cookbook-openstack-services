@@ -17,7 +17,7 @@ default["elk"]["logstash"]["syslog"]["ports"] = { }
 default["elk"]["logstash"]["syslog"]["bind_address"] = "0.0.0.0"
 default["elk"]["logstash"]["syslog"]["port"] = 514
 
-default["elk"]["logio"]["http_port"] = 9081
+default["elk"]["logio"]["http_port"] = 28778
 
 default["elk"]["logio"]["server_address"] = "127.0.0.1"
 default["elk"]["logio"]["server_port"] = 28777
