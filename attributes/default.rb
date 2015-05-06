@@ -25,22 +25,7 @@ default["elk"]["logio"]["server_port"] = 28777
 default["nvm"]["nvm_version"] = "0.22.2"
 default["nvm"]["nodejs_version"] = "0.10.35"
 
-## Additional Percona / MySql options
-default["percona"]["cluster_role"] = "os-ha-database"
-default["percona"]["haproxy_cluster_role"] = "os-ha-proxy"
-
-default["percona"]["mysql"]["ssl"] = false
-default["percona"]["mysql"]["config_path"] = "/etc/mysql"
-default["percona"]["mysql"]["certificate_databag_item"] = nil
-
-default["percona"]["openstack"]["services"] = [ ]
-
-## Additional Messaging RabbitMQ options
-default["rabbitmq"]["cluster_role"] = "os-ha-messaging"
-
 ## Attributes that identify the databags containing SSL certificate data
-default["rabbitmq"]["certificate_databag_item"] = nil
-default["percona"]["mysql"]["certificate_databag_item"] = nil
 default["openstack"]["dashboard"]["certificate_databag_item"] = nil
 
 ## OpenStack proxy (services loadbalancer)

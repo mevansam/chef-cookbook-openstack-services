@@ -10,7 +10,7 @@ cookbook 'xfs',             '1.1.0'
 cookbook 'hostsfile',       '~> 2.4.5'
 cookbook 'haproxy',         '~> 1.6.6'
 cookbook 'java',            '~> 1.29.0'
-cookbook 'logstash',        '~> 0.11.2'
+cookbook 'logstash',        '~> 0.11.4'
 cookbook 'kibana_lwrp',     '~> 2.0.0'
 cookbook 'elasticsearch',   '~> 0.3.13'
 

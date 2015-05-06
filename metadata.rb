@@ -18,8 +18,8 @@ depends          'haproxy',   '~> 1.6.6'
 depends          'hostsfile', '~> 2.4.5'
 
 depends          'java',          '~> 1.29.0'
-depends          'logstash',      '~> 0.11.2'
-depends          'kibana_lwrp',   '~> 2.0.0'
+depends          'logstash',      '~> 0.11.4'
+depends          'kibana_lwrp',   '~> 2.0.4'
 depends          'elasticsearch', '~> 0.3.13'
 
 depends          'openstack-common'

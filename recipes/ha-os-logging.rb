@@ -21,6 +21,90 @@
 include_recipe 'runit::default'
 include_recipe 'java::default'
 
+
+## Install elastic search
+
+include_recipe 'cluster::elasticsearch'
+plugin_installer = "#{node["elasticsearch"]["bindir"]}/plugin"
+
+script "install elasticsearch plugins" do
+    interpreter "bash"
+    user "root"
+    cwd "/tmp"
+    code <<-EOH
+
+    	#{plugin_installer} --list | grep "\\- head" 2>&1 > /dev/null
+    	if [ $? -ne 0 ]; then
+    		echo "**** Instaling elasticsearch-head plugin..."
+    		#{plugin_installer} --install mobz/elasticsearch-head
+		fi
+    EOH
+end
+
+
+# Configure Kibana
+
+install_type = node['kibana']['install_type']
+
+if node['kibana']['user'].empty?
+	if !node['kibana']['webserver'].empty?
+		webserver = node['kibana']['webserver']
+		kibana_user = node[webserver]['user']
+	else
+		kibana_user = 'nobody'
+	end
+else
+	kibana_user = node['kibana']['user']
+	kibana_user kibana_user do
+		name kibana_user
+		group kibana_user
+		home node['kibana']['install_dir']
+		action :create
+	end
+end
+
+kibana_install 'kibana' do
+	user kibana_user
+	group kibana_user
+	install_dir node['kibana']['install_dir']
+	install_type install_type
+	action :create
+end
+
+docroot = "#{node['kibana']['install_dir']}/current/kibana"
+kibana_config = "#{node['kibana']['install_dir']}/current/#{node['kibana'][install_type]['config']}"
+es_server = "#{node['kibana']['es_scheme']}#{node['kibana']['es_server']}:#{node['kibana']['es_port']}"
+
+template kibana_config do
+	source node['kibana'][install_type]['config_template']
+	cookbook node['kibana'][install_type]['config_template_cookbook']
+	mode '0644'
+	user kibana_user
+	group kibana_user
+	variables(
+		index: node['kibana']['config']['kibana_index'],
+		port: node['kibana']['java_webserver_port'],
+		elasticsearch: es_server,
+		default_route: node['kibana']['config']['default_route'],
+		panel_names:  node['kibana']['config']['panel_names']
+	)
+end
+
+if install_type == 'file'
+
+  include_recipe 'runit::default'
+
+  runit_service 'kibana' do
+    options(
+      user: kibana_user,
+      home: "#{node['kibana']['install_dir']}/current"
+    )
+    cookbook 'kibana_lwrp'
+    subscribes :restart, "template[#{kibana_config}]", :delayed
+  end
+end
+
+
 ## Create logstash instance
 
 logstash_config = node['logstash']['instance_default']
@@ -32,20 +116,30 @@ logstash_instance 'logstash' do
 	create_account false
 end
 
-## Install nodejs and logio
+shell = "sudo -i -u #{logstash_user} bash -lc"
+
+
+## Install nodejs
 
 nvm_version = node['nvm']['nvm_version']
 nodejs_version= node['nvm']['nodejs_version']
 
-ruby_block "install logio" do
+ruby_block "install nodejs" do
 	block do
-		shell = "sudo -i -u #{logstash_user} bash -lc"
-		
+
 		shell!("#{shell} \"curl https://raw.githubusercontent.com/creationix/nvm/v#{nvm_version}/install.sh | bash\"") \
 			unless ::File.exist?("#{logstash_home_dir}/.nvm/nvm.sh")
 
 		shell!("#{shell} \". .nvm/nvm.sh && nvm install #{nodejs_version}\"")  \
 			unless ::Dir.exist?("#{logstash_home_dir}/.nvm/v${nodejs_version}")
+	end
+end
+
+
+## Install logio
+
+ruby_block "install logio" do
+	block do
 
 		shell!("#{shell} \". .nvm/nvm.sh && nvm use #{nodejs_version} && npm install -g log.io --user #{logstash_config['user']}\"") \
 			unless ::File.exist?("#{logstash_home_dir}/.nvm/v${nodejs_version}/bin/log.io-server")
@@ -95,7 +189,8 @@ end
 templates = {
 	'input_syslog' => 'logging/input_syslog.conf.erb',
 	'output_error' => 'logging/output_errors.conf.erb',
-	'output_logio' => 'logging/output_logio.conf.erb'
+	'output_logio' => 'logging/output_logio.conf.erb',
+	'output_elasticsearch' => 'logging/output_elasticsearch.conf.erb'
 }
 template_variables = {
 
@@ -105,7 +200,9 @@ template_variables = {
 	input_logstash_log_path: "#{logstash_home_dir}/logstash/log",
 
 	output_logio_host: node['elk']['logio']['server_address'],
-	output_logio_port: node['elk']['logio']['server_port']
+	output_logio_port: node['elk']['logio']['server_port'],
+
+	output_elasticsearch_port: node['elasticsearch']['http']['port']
 }
 logstash_config 'logstash' do
 
@@ -144,3 +241,4 @@ logstash_service 'logstash' do
 	action :enable
 	notifies :create, "cookbook_file[sv-logstash-finish]", :immediately
 end
+
